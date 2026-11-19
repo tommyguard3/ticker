@@ -4,6 +4,48 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Live Sports Desk</title>
+    @keyframes cardSlideIn {
+    0% {
+      opacity: 0;
+      transform: translateY(14px) scale(0.98);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes scoreFlash {
+    0% { background-color: rgba(250, 204, 21, 0.45); transform: scale(1.03); }
+    100% { background-color: transparent; transform: scale(1); }
+  }
+
+  @keyframes liveBorderGlow {
+    0%, 100% { box-shadow: 0 8px 24px rgba(2, 8, 23, 0.55), 0 0 0px rgba(74, 222, 128, 0); }
+    50% { box-shadow: 0 8px 24px rgba(2, 8, 23, 0.55), 0 0 16px rgba(74, 222, 128, 0.28); }
+  }
+
+  .game-card {
+    animation: cardSlideIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+    transition: transform 0.3s ease, border-color 0.3s ease;
+  }
+
+  .game-card.is-live-card {
+    border-color: rgba(74, 222, 128, 0.55);
+    animation: cardSlideIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both, liveBorderGlow 3.5s ease-in-out infinite;
+  }
+
+  .score-updated {
+    border-radius: 6px;
+    animation: scoreFlash 2.2s ease-out;
+  }
+
+  .ticker-label {
+    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+    clip-path: polygon(0 0, 100% 0, 92% 100%, 0% 100%);
+    padding-right: 28px;
+  }
+  
 <style>
   @import url('https://googleapis.com');
 
@@ -309,6 +351,7 @@
 
   let allGames = Array.of();
   let currentPage = 0;
+  let previousScores = new Map();
 
   function updateClock() {
     const now = new Date();
@@ -488,25 +531,17 @@
     const cardsPerPage = calculateGridLayout();
 
     if (allGames.length === 0) {
-      grid.innerHTML = '<div class="empty-state">No games within the active 24-hour window.<br><span style="font-size:1rem; margin-top:10px; display:block;">Auto-checking feeds every 45 seconds...</span></div>';
-      indicator.textContent = 'STANDBY';
-      return;
-    }
+         grid.innerHTML = pageGames.map((g, idx) => {
+      const gameKey = g.league + '-' + g.away.name + '-' + g.home.name;
+      const prev = previousScores.get(gameKey);
+      const awayScored = prev && prev.away !== '' && g.away.score !== '' && prev.away !== g.away.score;
+      const homeScored = prev && prev.home !== '' && g.home.score !== '' && prev.home !== g.home.score;
+      previousScores.set(gameKey, { away: g.away.score, home: g.home.score });
 
-    const totalPages = Math.ceil(allGames.length / cardsPerPage);
-    if (currentPage >= totalPages) currentPage = 0;
-
-    const start = currentPage * cardsPerPage;
-    const pageGames = allGames.slice(start, start + cardsPerPage);
-
-    indicator.textContent = totalPages > 1
-      ? ('PAGE ' + (currentPage + 1) + ' OF ' + totalPages + ' • ' + allGames.length + ' GAMES')
-      : (allGames.length + ' GAMES');
-
-    grid.innerHTML = pageGames.map(g => {
       let cardClass = 'game-card';
       if (g.favScore < 10) cardClass += ' fav-tier1';
       else if (g.favScore < 50) cardClass += ' fav-tier2';
+      if (g.isLive) cardClass += ' is-live-card';
 
       const awayScoreNum = parseInt(g.away.score, 10);
       const homeScoreNum = parseInt(g.home.score, 10);
@@ -514,13 +549,14 @@
 
       const awayClass = showWinner ? (awayScoreNum > homeScoreNum ? 'winner' : 'loser') : '';
       const homeClass = showWinner ? (homeScoreNum > awayScoreNum ? 'winner' : 'loser') : '';
+      const delayStyle = 'animation-delay: ' + (idx * 45) + 'ms;';
 
-      return '<div class="' + cardClass + '">' +
+      return '<div class="' + cardClass + '" style="' + delayStyle + '">' +
         '<div class="card-header">' +
           '<span class="league-tag">' + g.league + '</span>' +
           '<span class="status-text ' + (g.isLive ? 'is-live' : '') + '">' + g.status + '</span>' +
         '</div>' +
-        '<div class="team-row">' +
+        '<div class="team-row ' + (awayScored ? 'score-updated' : '') + '">' +
           '<div class="team-info">' +
             '<img class="team-logo" src="' + g.away.logo + '" onerror="this.style.display=\'none\'">' +
             '<span class="team-name ' + awayClass + '">' + g.away.name + '</span>' +
@@ -528,7 +564,7 @@
           '</div>' +
           '<div class="team-score ' + awayClass + '">' + g.away.score + '</div>' +
         '</div>' +
-        '<div class="team-row">' +
+        '<div class="team-row ' + (homeScored ? 'score-updated' : '') + '">' +
           '<div class="team-info">' +
             '<img class="team-logo" src="' + g.home.logo + '" onerror="this.style.display=\'none\'">' +
             '<span class="team-name ' + homeClass + '">' + g.home.name + '</span>' +
