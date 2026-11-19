@@ -531,7 +531,22 @@
     const cardsPerPage = calculateGridLayout();
 
     if (allGames.length === 0) {
-         grid.innerHTML = pageGames.map((g, idx) => {
+      grid.innerHTML = '<div class="empty-state">No games within the active 24-hour window.<br><span style="font-size:1rem; margin-top:10px; display:block;">Auto-checking feeds every 45 seconds...</span></div>';
+      indicator.textContent = 'STANDBY';
+      return;
+    }
+
+    const totalPages = Math.ceil(allGames.length / cardsPerPage);
+    if (currentPage >= totalPages) currentPage = 0;
+
+    const start = currentPage * cardsPerPage;
+    const pageGames = allGames.slice(start, start + cardsPerPage);
+
+    indicator.textContent = totalPages > 1
+      ? ('PAGE ' + (currentPage + 1) + ' OF ' + totalPages + ' • ' + allGames.length + ' GAMES')
+      : (allGames.length + ' GAMES');
+
+    grid.innerHTML = pageGames.map((g, idx) => {
       const gameKey = g.league + '-' + g.away.name + '-' + g.home.name;
       const prev = previousScores.get(gameKey);
       const awayScored = prev && prev.away !== '' && g.away.score !== '' && prev.away !== g.away.score;
