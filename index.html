@@ -285,12 +285,11 @@
     { id: 'NBA', tier: 2, url: 'https://espn.com' },
     { id: 'NFL', tier: 2, url: 'https://espn.com' },
     { id: 'UFC', tier: 2, url: 'https://espn.com' },
-    { id: 'WBC', tier: 3, url: 'https://espn.com' },
-    { id: 'CARIBBEAN', tier: 3, url: 'https://espn.com' }
+    { id: 'WBC', tier: 3, url: 'https://espn.com' }
   ];
 
-  const TIER1_FAVS = ['Blue Jays', 'Toronto Blue Jays', 'Maple Leafs', 'Toronto Maple Leafs', 'Argonauts', 'Toronto Argonauts', 'Raptors', 'Toronto Raptors'];
-  const TIER2_FAVS = ['Wild', 'Minnesota Wild', 'Cardinals', 'St. Louis Cardinals'];
+  const TIER1_FAVS = ['Blue Jays', 'Maple Leafs', 'Argonauts', 'Raptors'];
+  const TIER2_FAVS = ['Wild', 'Cardinals'];
 
   let allGames = [];
   let currentPage = 0;
@@ -298,21 +297,20 @@
 
   function updateClock() {
     const now = new Date();
-    const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-    const dateStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    document.getElementById('clock-time').textContent = timeStr;
-    document.getElementById('clock-date').textContent = dateStr;
+    document.getElementById('clock-time').textContent = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    document.getElementById('clock-date').textContent = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   }
   setInterval(updateClock, 1000);
   updateClock();
 
   function getTeamPriority(teamName) {
     if (!teamName) return 99;
+    const lower = teamName.toLowerCase();
     for (let i = 0; i < TIER1_FAVS.length; i++) {
-      if (teamName.toLowerCase().includes(TIER1_FAVS.at(i).toLowerCase())) return 1 + (i * 0.1);
+      if (lower.includes(TIER1_FAVS.at(i).toLowerCase())) return 1 + (i * 0.1);
     }
     for (let i = 0; i < TIER2_FAVS.length; i++) {
-      if (teamName.toLowerCase().includes(TIER2_FAVS.at(i).toLowerCase())) return 10 + (i * 0.1);
+      if (lower.includes(TIER2_FAVS.at(i).toLowerCase())) return 10 + (i * 0.1);
     }
     return 50;
   }
@@ -328,46 +326,45 @@
         const data = await res.json();
         const events = data.events || [];
 
-        events.forEach(ev => {
-          const comp = ev.competitions?.at(0);
-          if (!comp) return;
+        for (const ev of events) {
+          const comp = ev.competitions && ev.competitions.at(0);
+          if (!comp || !comp.competitors) continue;
 
           if (league.id === 'UFC') {
-            const fighters = comp.competitors || [];
-            if (fighters.length >= 2) {
-              const f1 = fighters.at(0)?.athlete?.displayName || 'Fighter 1';
-              const f2 = fighters.at(1)?.athlete?.displayName || 'Fighter 2';
-              const status = ev.status?.type?.shortDetail || 'Scheduled';
-              const isLive = ev.status?.type?.state === 'in';
+            if (comp.competitors.length >= 2) {
+              const f1 = comp.competitors.at(0).athlete ? comp.competitors.at(0).athlete.displayName : 'Fighter 1';
+              const f2 = comp.competitors.at(1).athlete ? comp.competitors.at(1).athlete.displayName : 'Fighter 2';
+              const status = ev.status && ev.status.type ? ev.status.type.shortDetail : 'Scheduled';
+              const isLive = ev.status && ev.status.type && ev.status.type.state === 'in';
               fetchedGames.push({
                 league: 'UFC',
                 leagueTier: league.tier,
                 favScore: 40,
-                isLive,
-                isFinal: ev.status?.type?.state === 'post',
-                status,
-                away: { name: f1, score: fighters.at(0)?.winner ? 'WIN' : '', logo: 'https://espncdn.com', record: '' },
-                home: { name: f2, score: fighters.at(1)?.winner ? 'WIN' : '', logo: 'https://espncdn.com', record: '' }
+                isLive: isLive,
+                isFinal: ev.status && ev.status.type && ev.status.type.state === 'post',
+                status: status,
+                away: { name: f1, score: comp.competitors.at(0).winner ? 'WIN' : '', logo: 'https://espncdn.com', record: '' },
+                home: { name: f2, score: comp.competitors.at(1).winner ? 'WIN' : '', logo: 'https://espncdn.com', record: '' }
               });
             }
-            return;
+            continue;
           }
 
-          const homeComp = comp.competitors?.find(c => c.homeAway === 'home') || comp.competitors?.at(0);
-          const awayComp = comp.competitors?.find(c => c.homeAway === 'away') || comp.competitors?.at(1);
-          if (!homeComp || !awayComp) return;
+          const homeComp = comp.competitors.find(c => c.homeAway === 'home') || comp.competitors.at(0);
+          const awayComp = comp.competitors.find(c => c.homeAway === 'away') || comp.competitors.at(1);
+          if (!homeComp || !awayComp) continue;
 
-          const homeName = homeComp.team?.shortDisplayName || homeComp.team?.name || 'Home';
-          const awayName = awayComp.team?.shortDisplayName || awayComp.team?.name || 'Away';
-          const homeFull = homeComp.team?.displayName || homeName;
-          const awayFull = awayComp.team?.displayName || awayName;
+          const homeName = (homeComp.team && (homeComp.team.shortDisplayName || homeComp.team.name)) || 'Home';
+          const awayName = (awayComp.team && (awayComp.team.shortDisplayName || awayComp.team.name)) || 'Away';
+          const homeFull = (homeComp.team && homeComp.team.displayName) || homeName;
+          const awayFull = (awayComp.team && awayComp.team.displayName) || awayName;
 
-          const p1 = getTeamPriority(homeFull);
-          const p2 = getTeamPriority(awayFull);
-          const bestFavScore = Math.min(p1, p2);
+          const bestFavScore = Math.min(getTeamPriority(homeFull), getTeamPriority(awayFull));
+          const state = ev.status && ev.status.type ? ev.status.type.state : 'pre';
+          const statusDetail = ev.status && ev.status.type ? ev.status.type.shortDetail : '';
 
-          const state = ev.status?.type?.state;
-          const statusDetail = ev.status?.type?.shortDetail || '';
+          const awayRec = (awayComp.records && awayComp.records.at(0)) ? awayComp.records.at(0).summary : '';
+          const homeRec = (homeComp.records && homeComp.records.at(0)) ? homeComp.records.at(0).summary : '';
 
           const gameObj = {
             league: league.id,
@@ -379,14 +376,14 @@
             away: {
               name: awayName,
               score: state === 'pre' ? '' : (awayComp.score || '0'),
-              logo: awayComp.team?.logo || '',
-              record: awayComp.records?.at(0)?.summary || ''
+              logo: (awayComp.team && awayComp.team.logo) || '',
+              record: awayRec
             },
             home: {
               name: homeName,
               score: state === 'pre' ? '' : (homeComp.score || '0'),
-              logo: homeComp.team?.logo || '',
-              record: homeComp.records?.at(0)?.summary || ''
+              logo: (homeComp.team && homeComp.team.logo) || '',
+              record: homeRec
             }
           };
 
@@ -396,9 +393,9 @@
             ? `${awayName} vs ${homeName} (${statusDetail})`
             : `${awayName} ${gameObj.away.score} - ${homeName} ${gameObj.home.score} (${statusDetail})`;
           tickerHeadlines.push(`${league.id}: ${scoreSummary}`);
-        });
+        }
       } catch (err) {
-        console.warn(`Skipped ${league.id}:`, err);
+        console.log('Feed skipped:', league.id, err);
       }
     }
 
@@ -439,11 +436,8 @@
 
     grid.innerHTML = pageGames.map(g => {
       let cardClass = 'game-card';
-      if (g.favScore < 10) {
-        cardClass += ' fav-tier1';
-      } else if (g.favScore < 50) {
-        cardClass += ' fav-tier2';
-      }
+      if (g.favScore < 10) cardClass += ' fav-tier1';
+      else if (g.favScore < 50) cardClass += ' fav-tier2';
 
       const awayScoreNum = parseInt(g.away.score, 10);
       const homeScoreNum = parseInt(g.home.score, 10);
@@ -490,6 +484,5 @@
   fetchAllSports();
   setInterval(fetchAllSports, 30000);
 </script>
-
 </body>
 </html>
