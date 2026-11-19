@@ -279,19 +279,21 @@
   </div>
 </footer>
 <script>
+  // =========================================================================
+  // CORS-SAFE DATA ENGINE (Uses TheSportsDB + Official Open Feeds)
+  // =========================================================================
   const LEAGUES = Array.of(
-    { id: 'MLB', tier: 1, url: 'https://espn.com' },
-    { id: 'NHL', tier: 1, url: 'https://espn.com' },
-    { id: 'CFL', tier: 1, url: 'https://espn.com' },
-    { id: 'NBA', tier: 2, url: 'https://espn.com' },
-    { id: 'NFL', tier: 2, url: 'https://espn.com' },
-    { id: 'UFC', tier: 2, url: 'https://espn.com' },
-    { id: 'WBC', tier: 3, url: 'https://espn.com' },
-    { id: 'WINTER', tier: 3, url: 'https://espn.com' }
+    { id: 'MLB', tier: 1, sport: 'Baseball', leagueName: 'MLB', espnNews: 'https://espn.com' },
+    { id: 'NHL', tier: 1, sport: 'Ice Hockey', leagueName: 'NHL', espnNews: 'https://espn.com' },
+    { id: 'CFL', tier: 1, sport: 'American Football', leagueName: 'CFL', espnNews: 'https://espn.com' },
+    { id: 'NBA', tier: 2, sport: 'Basketball', leagueName: 'NBA', espnNews: 'https://espn.com' },
+    { id: 'NFL', tier: 2, sport: 'American Football', leagueName: 'NFL', espnNews: 'https://espn.com' },
+    { id: 'UFC', tier: 2, sport: 'Fighting', leagueName: 'UFC', espnNews: 'https://espn.com' },
+    { id: 'INTL BASEBALL', tier: 3, sport: 'Baseball', leagueName: 'World Baseball Classic', espnNews: 'https://espn.com' }
   );
 
-  const TIER1_FAVS = Array.of('Blue Jays', 'Maple Leafs', 'Argonauts', 'Raptors');
-  const TIER2_FAVS = Array.of('Wild', 'Cardinals');
+  const TIER1_FAVS = Array.of('Blue Jays', 'Maple Leafs', 'Argonauts', 'Raptors', 'Toronto');
+  const TIER2_FAVS = Array.of('Wild', 'Minnesota', 'Cardinals', 'St. Louis');
 
   let allGames = Array.of();
   let currentPage = 0;
@@ -317,121 +319,127 @@
     return 50;
   }
 
-  async function fetchWithFailover(targetUrl) {
-    const routes = Array.of(
-      targetUrl,
-      'https://corsproxy.io?' + encodeURIComponent(targetUrl),
-      'https://allorigins.win' + encodeURIComponent(targetUrl)
-    );
-
-    for (const route of routes) {
-      try {
-        const res = await fetch(route);
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.events) return data;
-        }
-      } catch (e) {
-        // Try next failover route
-      }
-    }
-    return null;
+  function getTodayDateString() {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   async function fetchAllSports() {
     let fetchedGames = Array.of();
-    let tickerHeadlines = Array.of();
+    let wireHeadlines = Array.of();
+    const todayStr = getTodayDateString();
 
-    const tasks = LEAGUES.map(async (league) => {
-      const data = await fetchWithFailover(league.url);
-      if (!data || !data.events) return;
+    // 1. Fetch Today's Live & Scheduled Games via TheSportsDB (100% CORS-Open)
+    const scheduleTasks = LEAGUES.map(async (lg) => {
+      try {
+        const url = `https://thesportsdb.com{todayStr}&s=${encodeURIComponent(lg.sport)}`;
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const data = await res.json();
+        const events = data.events || Array.of();
 
-      for (const ev of data.events) {
-        const comp = ev.competitions && ev.competitions.at(0);
-        if (!comp || !comp.competitors) continue;
+        for (const ev of events) {
+          // Match league name loosely so NHL, NBA, NFL, MLB, CFL, UFC, Winter/WBC all match
+          const evLeague = (ev.strLeague || '').toLowerCase();
+          const targetLeague = lg.leagueName.toLowerCase();
+          const isMatch = evLeague.includes(targetLeague) ||
+                          (lg.id === 'INTL BASEBALL' && (evLeague.includes('winter') || evLeague.includes('caribbean') || evLeague.includes('nippon') || evLeague.includes('korean')));
 
-        if (league.id === 'UFC') {
-          if (comp.competitors.length >= 2) {
-            const c0 = comp.competitors.at(0);
-            const c1 = comp.competitors.at(1);
-            const f1 = c0.athlete ? c0.athlete.displayName : 'Fighter 1';
-            const f2 = c1.athlete ? c1.athlete.displayName : 'Fighter 2';
-            const status = ev.status && ev.status.type ? ev.status.type.shortDetail : 'Scheduled';
-            const state = ev.status && ev.status.type ? ev.status.type.state : 'pre';
-            fetchedGames.push({
-              league: 'UFC',
-              leagueTier: league.tier,
-              favScore: 40,
-              isLive: state === 'in',
-              isFinal: state === 'post',
-              status: status,
-              away: { name: f1, score: c0.winner ? 'WIN' : '', logo: 'https://espncdn.com', record: '' },
-              home: { name: f2, score: c1.winner ? 'WIN' : '', logo: 'https://espncdn.com', record: '' }
-            });
+          if (!isMatch) continue;
+
+          const homeName = ev.strHomeTeam || 'Home';
+          const awayName = ev.strAwayTeam || 'Away';
+          const bestFavScore = Math.min(getTeamPriority(homeName), getTeamPriority(awayName));
+
+          const rawStatus = ev.strStatus || '';
+          const isFinal = rawStatus.toLowerCase().includes('finished') || rawStatus === 'FT' || rawStatus === 'AOT';
+          const isLive = !isFinal && rawStatus !== '' && rawStatus !== 'Not Started' && rawStatus !== 'NS';
+
+          let displayStatus = rawStatus;
+          if (!displayStatus || displayStatus === 'Not Started' || displayStatus === 'NS') {
+            // Convert UTC time to local time if available
+            if (ev.strTimestamp) {
+              const dt = new Date(ev.strTimestamp);
+              displayStatus = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+            } else {
+              displayStatus = ev.strTime ? ev.strTime.slice(0, 5) + ' UTC' : 'TODAY';
+            }
+          } else if (isFinal) {
+            displayStatus = 'FINAL';
           }
-          continue;
+
+          const hasScore = ev.intHomeScore !== null && ev.intAwayScore !== null;
+
+          fetchedGames.push({
+            league: lg.id,
+            leagueTier: lg.tier,
+            favScore: bestFavScore,
+            isLive: isLive,
+            isFinal: isFinal,
+            status: displayStatus,
+            away: {
+              name: awayName,
+              score: hasScore ? String(ev.intAwayScore) : '',
+              logo: ev.strAwayTeamBadge ? ev.strAwayTeamBadge + '/tiny' : '',
+              record: ''
+            },
+            home: {
+              name: homeName,
+              score: hasScore ? String(ev.intHomeScore) : '',
+              logo: ev.strHomeTeamBadge ? ev.strHomeTeamBadge + '/tiny' : '',
+              record: ''
+            }
+          });
         }
-
-        const homeComp = comp.competitors.find(c => c.homeAway === 'home') || comp.competitors.at(0);
-        const awayComp = comp.competitors.find(c => c.homeAway === 'away') || comp.competitors.at(1);
-        if (!homeComp || !awayComp) continue;
-
-        const homeName = (homeComp.team && (homeComp.team.shortDisplayName || homeComp.team.name)) || 'Home';
-        const awayName = (awayComp.team && (awayComp.team.shortDisplayName || awayComp.team.name)) || 'Away';
-        const homeFull = (homeComp.team && homeComp.team.displayName) || homeName;
-        const awayFull = (awayComp.team && awayComp.team.displayName) || awayName;
-
-        const bestFavScore = Math.min(getTeamPriority(homeFull), getTeamPriority(awayFull));
-        const state = ev.status && ev.status.type ? ev.status.type.state : 'pre';
-        const statusDetail = ev.status && ev.status.type ? ev.status.type.shortDetail : '';
-
-        const awayRec = (awayComp.records && awayComp.records.at(0)) ? awayComp.records.at(0).summary : '';
-        const homeRec = (homeComp.records && homeComp.records.at(0)) ? homeComp.records.at(0).summary : '';
-
-        const gameObj = {
-          league: league.id,
-          leagueTier: league.tier,
-          favScore: bestFavScore,
-          isLive: state === 'in',
-          isFinal: state === 'post',
-          status: statusDetail,
-          away: {
-            name: awayName,
-            score: state === 'pre' ? '' : (awayComp.score || '0'),
-            logo: (awayComp.team && awayComp.team.logo) || '',
-            record: awayRec
-          },
-          home: {
-            name: homeName,
-            score: state === 'pre' ? '' : (homeComp.score || '0'),
-            logo: (homeComp.team && homeComp.team.logo) || '',
-            record: homeRec
-          }
-        };
-
-        fetchedGames.push(gameObj);
-
-        const scoreSummary = state === 'pre'
-          ? `${awayName} vs ${homeName} (${statusDetail})`
-          : `${awayName} ${gameObj.away.score} - ${homeName} ${gameObj.home.score} (${statusDetail})`;
-        tickerHeadlines.push(`${league.id}: ${scoreSummary}`);
+      } catch (err) {
+        console.log('Schedule check skipped for', lg.id);
       }
     });
 
-    await Promise.all(tasks);
+    // 2. Fetch Live Breaking Headlines for Bottom Ticker via CORS-Open RSS2JSON
+    const newsTasks = LEAGUES.slice(0, 5).map(async (lg) => {
+      try {
+        const rssUrl = `https://rss2json.com{encodeURIComponent(lg.espnNews)}`;
+        const res = await fetch(rssUrl);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.items) {
+          for (const item of data.items.slice(0, 3)) {
+            wireHeadlines.push(`${lg.id}: ${item.title}`);
+          }
+        }
+      } catch (e) {
+        // Ignore news error
+      }
+    });
 
-    fetchedGames.sort((a, b) => {
+    await Promise.all(scheduleTasks);
+    await Promise.all(newsTasks);
+
+    // Deduplicate games by matchup
+    const uniqueMap = new Map();
+    for (const g of fetchedGames) {
+      const key = `${g.league}-${g.away.name}-${g.home.name}`;
+      if (!uniqueMap.has(key)) uniqueMap.set(key, g);
+    }
+    const cleanGames = Array.from(uniqueMap.values());
+
+    // Sort: Toronto Favorites First -> Live Games -> League Tier
+    cleanGames.sort((a, b) => {
       if (a.favScore !== b.favScore) return a.favScore - b.favScore;
       if (a.isLive !== b.isLive) return a.isLive ? -1 : 1;
       return a.leagueTier - b.leagueTier;
     });
 
-    allGames = fetchedGames;
+    allGames = cleanGames;
 
-    if (tickerHeadlines.length > 0) {
-      document.getElementById('bottom-ticker').textContent = tickerHeadlines.join('   •   ');
+    if (wireHeadlines.length > 0) {
+      document.getElementById('bottom-ticker').textContent = wireHeadlines.join('   •   ');
     } else {
-      document.getElementById('bottom-ticker').textContent = 'Monitoring MLB, NHL, CFL, NBA, NFL, UFC & International Baseball...';
+      document.getElementById('bottom-ticker').textContent = 'LIVE SCOREBOARD ACTIVE • MLB • NHL • CFL • NBA • NFL • UFC';
     }
 
     renderBoard();
@@ -477,7 +485,6 @@
             <div class="team-info">
               <img class="team-logo" src="${g.away.logo}" onerror="this.style.display='none'">
               <span class="team-name ${awayClass}">${g.away.name}</span>
-              <span class="team-record">${g.away.record}</span>
             </div>
             <div class="team-score ${awayClass}">${g.away.score}</div>
           </div>
@@ -485,7 +492,6 @@
             <div class="team-info">
               <img class="team-logo" src="${g.home.logo}" onerror="this.style.display='none'">
               <span class="team-name ${homeClass}">${g.home.name}</span>
-              <span class="team-record">${g.home.record}</span>
             </div>
             <div class="team-score ${homeClass}">${g.home.score}</div>
           </div>
