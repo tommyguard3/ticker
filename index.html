@@ -25,22 +25,14 @@
     padding: 0;
   }
 
-  @keyframes studioSweep {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-  }
-
   @keyframes lightBeamSweep {
-    0% { transform: translateX(-48%) rotate(-22deg); opacity: 0.38; }
-    50% { transform: translateX(48%) rotate(-22deg); opacity: 0.85; }
-    100% { transform: translateX(-48%) rotate(-22deg); opacity: 0.38; }
+    0% { transform: translate3d(-25%, -10%, 0) rotate(-22deg); opacity: 0.45; }
+    50% { transform: translate3d(25%, 10%, 0) rotate(-22deg); opacity: 0.9; }
+    100% { transform: translate3d(-25%, -10%, 0) rotate(-22deg); opacity: 0.45; }
   }
 
   body {
-    background: linear-gradient(125deg, #020813 0%, #0e387a 28%, #2563eb 50%, #0a2654 74%, #020813 100%);
-    background-size: 300% 300%;
-    animation: studioSweep 11s ease-in-out infinite;
+    background: linear-gradient(135deg, #020813 0%, #0b2654 45%, #163d7a 75%, #020813 100%);
     color: var(--text-main);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     height: 100vh;
@@ -55,12 +47,13 @@
   body::before {
     content: '';
     position: fixed;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(ellipse at center, rgba(56, 189, 248, 0.32) 0%, rgba(37, 99, 235, 0.14) 38%, transparent 65%);
-    animation: lightBeamSweep 10s ease-in-out infinite;
+    top: -40%;
+    left: -40%;
+    width: 180%;
+    height: 180%;
+    background: radial-gradient(ellipse at center, rgba(56, 189, 248, 0.34) 0%, rgba(37, 99, 235, 0.16) 40%, transparent 68%);
+    animation: lightBeamSweep 11s ease-in-out infinite;
+    will-change: transform, opacity;
     pointer-events: none;
     z-index: 0;
   }
@@ -142,7 +135,7 @@
     z-index: 2;
   }
 
-   @keyframes cardSlideIn {
+  @keyframes cardSlideIn {
     0% { opacity: 0.25; transform: scale(0.985); }
     100% { opacity: 1; transform: scale(1); }
   }
@@ -168,12 +161,13 @@
     box-shadow: 0 8px 24px rgba(2, 8, 23, 0.55);
     min-height: 0;
     overflow: hidden;
-    animation: cardSlideIn 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
+    will-change: transform, opacity;
+    animation: cardSlideIn 0.65s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   .game-card.is-live-card {
     border-color: rgba(74, 222, 128, 0.55);
-    animation: cardSlideIn 0.85s cubic-bezier(0.16, 1, 0.3, 1) both, liveBorderGlow 4s ease-in-out infinite;
+    animation: cardSlideIn 0.65s cubic-bezier(0.16, 1, 0.3, 1) both, liveBorderGlow 4s ease-in-out infinite;
   }
 
   .game-card.fav-tier1 {
@@ -313,8 +307,8 @@
   }
 
   @keyframes kenBurns {
-    0% { transform: scale(1) translate(0, 0); }
-    100% { transform: scale(1.07) translate(-1%, -1%); }
+    0% { transform: scale3d(1, 1, 1); }
+    100% { transform: scale3d(1.07, 1.07, 1); }
   }
 
   #recap-image {
@@ -324,7 +318,8 @@
     height: 100%;
     object-fit: cover;
     opacity: 0.74;
-    animation: kenBurns 10s ease-out forwards;
+    will-change: transform;
+    animation: kenBurns 8s ease-out forwards;
   }
 
   .recap-scrim {
@@ -407,6 +402,8 @@
     display: inline-block;
     padding-left: 100%;
     animation: ticker 90s linear infinite;
+    will-change: transform;
+    backface-visibility: hidden;
     font-size: 1.05rem;
     font-weight: 600;
     color: #f0f9ff;
@@ -468,6 +465,7 @@
     { id: 'MLB', tier: 1, sport: 'baseball', slug: 'mlb' },
     { id: 'NHL', tier: 1, sport: 'hockey', slug: 'nhl' },
     { id: 'CFL', tier: 1, sport: 'football', slug: 'cfl' },
+    { id: 'WJC', tier: 1, sport: 'hockey', slug: 'mens-world-junior-championship' },
     { id: 'IIHF', tier: 1, sport: 'hockey', slug: 'world-championship' },
     { id: 'OLYMPICS', tier: 1, sport: 'hockey', slug: 'mens-olympics' },
     { id: 'OLYMPICS W', tier: 1, sport: 'hockey', slug: 'womens-olympics' },
@@ -539,7 +537,8 @@
     const blockedTerms = Array.of(
       'highlight', 'recap', 'watch:', ' vs.', ' vs ',
       'tracker', 'fantasy', 'mock draft', 'power rankings',
-      'how to watch', 'odds', 'picks', 'predictions', 'standings', 'schedule'
+      'how to watch', 'odds', 'picks', 'predictions', 'standings', 'schedule',
+      'trade grades', 'offseason analysis', 'free agent rankings'
     );
     for (const term of blockedTerms) {
       if (lower.includes(term)) return false;
@@ -603,7 +602,7 @@
     const durationSeconds = Math.max(25, Math.round(totalDistance / 95));
     tickerEl.style.animationDuration = durationSeconds + 's';
   }
-    async function fetchAllSports() {
+  async function fetchAllSports() {
     let fetchedGames = Array.of();
     let topStories = Array.of();
     let collectedSlides = Array.of();
@@ -727,6 +726,7 @@
 
       await sleep(110);
     }
+
     fetchedGames.sort((a, b) => {
       if (a.favScore !== b.favScore) return a.favScore - b.favScore;
       if (a.isLive !== b.isLive) return a.isLive ? -1 : 1;
@@ -746,7 +746,6 @@
       }
     }
 
-    // 1. Check if Olympics are actively running: if so, all 5 recap slides come from Olympics
     try {
       const host = Array.of('site', 'web', 'api', 'espn', 'com').join('.');
       const olyUrl = Array.of('https:', '', host, 'apis', 'site', 'v2', 'sports', 'olympics', 'news').join('/');
@@ -780,7 +779,6 @@
       // Fall through to standard 5-sport mix
     }
 
-    // 2. Standard 5-sport mix when Olympics are not active
     if (recapSlides.length === 0) {
       const validSlides = collectedSlides.filter(slide => {
         const pubMs = slide.published ? new Date(slide.published).getTime() : Date.now();
@@ -822,16 +820,17 @@
     }
 
     const tickerEl = document.getElementById('bottom-ticker');
-    if (topStories.length > 0) {
-      tickerEl.textContent = topStories.join('     •     ');
-    } else {
-      tickerEl.textContent = 'LIVE SPORTS DESK • MLB • NHL • CFL • NBA • NFL • UFC';
+    const newTickerText = topStories.length > 0
+      ? topStories.join('     •     ')
+      : 'LIVE SPORTS DESK • MLB • NHL • CFL • NBA • NFL • UFC';
+
+    if (tickerEl.textContent !== newTickerText) {
+      tickerEl.textContent = newTickerText;
+      updateTickerSpeed();
     }
-    updateTickerSpeed();
 
     renderBoard();
   }
-
   function renderBoard() {
     const grid = document.getElementById('scoreboard-grid');
     const indicator = document.getElementById('page-indicator');
@@ -870,7 +869,7 @@
 
       const awayClass = showWinner ? (awayScoreNum > homeScoreNum ? 'winner' : 'loser') : '';
       const homeClass = showWinner ? (homeScoreNum > awayScoreNum ? 'winner' : 'loser') : '';
-      const delayStyle = 'animation-delay: ' + (idx * 85) + 'ms;';
+      const delayStyle = 'animation-delay: ' + (idx * 75) + 'ms;';
 
       const footerStatHtml = g.subtext
         ? ('<div class="card-footer-stat"><span>' + g.subtext.label + '</span>' + g.subtext.text + '</div>')
@@ -918,7 +917,7 @@
     for (const slide of slidesToShow) {
       imgEl.style.animation = 'none';
       void imgEl.offsetWidth;
-      imgEl.style.animation = 'kenBurns 10s ease-out forwards';
+      imgEl.style.animation = 'kenBurns 8s ease-out forwards';
       imgEl.src = slide.imageUrl;
       badgeEl.textContent = slide.league + ' DESK RECAP';
       headEl.textContent = slide.headline;
