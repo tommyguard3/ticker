@@ -130,7 +130,7 @@
     background: var(--card-bg);
     border: 1px solid var(--card-border);
     border-radius: 14px;
-    padding: 2vh 1.8vw;
+    padding: 1.8vh 1.8vw;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -158,7 +158,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: clamp(0.8rem, 1.1vw, 1rem);
+    font-size: clamp(0.8rem, 1.05vw, 0.98rem);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.8px;
@@ -182,7 +182,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1vh 0;
+    padding: 0.8vh 0;
   }
 
   .team-row:first-of-type {
@@ -202,14 +202,14 @@
   }
 
   .team-logo {
-    width: clamp(32px, 3.2vw, 52px);
-    height: clamp(32px, 3.2vw, 52px);
+    width: clamp(30px, 3vw, 48px);
+    height: clamp(30px, 3vw, 48px);
     object-fit: contain;
     flex-shrink: 0;
   }
 
   .team-name {
-    font-size: clamp(1.15rem, 1.65vw, 1.85rem);
+    font-size: clamp(1.1rem, 1.55vw, 1.75rem);
     font-weight: 700;
     white-space: nowrap;
     overflow: hidden;
@@ -217,7 +217,7 @@
   }
 
   .team-record {
-    font-size: clamp(0.78rem, 0.95vw, 1rem);
+    font-size: clamp(0.76rem, 0.9vw, 0.96rem);
     color: var(--text-muted);
     font-weight: 400;
     flex-shrink: 0;
@@ -225,7 +225,7 @@
 
   .team-score {
     font-family: 'JetBrains Mono', monospace;
-    font-size: clamp(1.6rem, 2.4vw, 2.6rem);
+    font-size: clamp(1.5rem, 2.2vw, 2.4rem);
     font-weight: 700;
     margin-left: 12px;
     flex-shrink: 0;
@@ -238,6 +238,26 @@
   .loser {
     color: #7dd3fc;
     opacity: 0.55;
+  }
+
+  .card-footer-stat {
+    margin-top: 0.6vh;
+    padding-top: 0.8vh;
+    border-top: 1px solid rgba(56, 189, 248, 0.18);
+    font-size: clamp(0.76rem, 0.95vw, 1.02rem);
+    color: #bae6fd;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+
+  .card-footer-stat span {
+    color: #38bdf8;
+    font-weight: 800;
+    margin-right: 6px;
+    text-transform: uppercase;
   }
 
   footer {
@@ -320,9 +340,9 @@
 </main>
 
 <footer>
-  <div class="ticker-label">UPCOMING &amp; WIRE</div>
+  <div class="ticker-label">TOP STORIES</div>
   <div class="ticker-wrap">
-    <div class="ticker-move" id="bottom-ticker">Loading live schedules...</div>
+    <div class="ticker-move" id="bottom-ticker">Loading breaking sports headlines...</div>
   </div>
 </footer>
 
@@ -372,6 +392,12 @@
     return parts.join('/');
   }
 
+  function getNewsEndpoint(sport, slug) {
+    const host = Array.of('site', 'web', 'api', 'espn', 'com').join('.');
+    const parts = Array.of('https:', '', host, 'apis', 'site', 'v2', 'sports', sport, slug, 'news');
+    return parts.join('/');
+  }
+
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
@@ -385,6 +411,34 @@
     return hoursDiff >= -24 && hoursDiff <= 36;
   }
 
+  function extractCardSubtext(comp, state) {
+    if (state === 'pre') {
+      const broadcasts = comp.broadcasts && comp.broadcasts.at(0);
+      const tvNames = (broadcasts && broadcasts.names) ? broadcasts.names.join(' / ') : '';
+      const venueName = (comp.venue && comp.venue.fullName) ? comp.venue.fullName : '';
+      if (tvNames && venueName) return { label: 'TV', text: tvNames + ' • ' + venueName };
+      if (tvNames) return { label: 'TV', text: tvNames };
+      if (venueName) return { label: 'VENUE', text: venueName };
+      return null;
+    }
+
+    const leaders = comp.leaders;
+    if (leaders && leaders.length > 0) {
+      const primaryCat = leaders.at(0);
+      const topLeader = primaryCat && primaryCat.leaders && primaryCat.leaders.at(0);
+      if (topLeader && topLeader.athlete && topLeader.displayValue) {
+        const playerName = topLeader.athlete.shortName || topLeader.athlete.displayName;
+        return { label: 'TOP STAT', text: playerName + ' (' + topLeader.displayValue + ')' };
+      }
+    }
+
+    if (comp.headlines && comp.headlines.at(0) && comp.headlines.at(0).shortLinkText) {
+      return { label: 'RECAP', text: comp.headlines.at(0).shortLinkText };
+    }
+
+    return null;
+  }
+
   function updateTickerSpeed() {
     const tickerEl = document.getElementById('bottom-ticker');
     const containerWidth = tickerEl.parentElement.clientWidth || 1000;
@@ -395,94 +449,108 @@
   }
   async function fetchAllSports() {
     let fetchedGames = Array.of();
-    let wireHeadlines = Array.of();
+    let topStories = Array.of();
 
     for (const lg of LEAGUES) {
       try {
         const endpoint = getScoreboardEndpoint(lg.sport, lg.slug);
         const res = await fetch(endpoint);
-        if (!res.ok) continue;
+        if (res.ok) {
+          const data = await res.json();
+          const events = (data && data.events) ? data.events : Array.of();
 
-        const data = await res.json();
-        const events = (data && data.events) ? data.events : Array.of();
+          for (const ev of events) {
+            if (!isWithinActiveWindow(ev.date)) continue;
 
-        for (const ev of events) {
-          if (!isWithinActiveWindow(ev.date)) continue;
+            const comp = ev.competitions && ev.competitions.at(0);
+            if (!comp || !comp.competitors) continue;
 
-          const comp = ev.competitions && ev.competitions.at(0);
-          if (!comp || !comp.competitors) continue;
-
-          if (lg.id === 'UFC') {
-            if (comp.competitors.length >= 2) {
-              const c0 = comp.competitors.at(0);
-              const c1 = comp.competitors.at(1);
-              const f1 = c0.athlete ? c0.athlete.displayName : 'Fighter 1';
-              const f2 = c1.athlete ? c1.athlete.displayName : 'Fighter 2';
-              const status = ev.status && ev.status.type ? ev.status.type.shortDetail : 'Scheduled';
-              const state = ev.status && ev.status.type ? ev.status.type.state : 'pre';
-              const ufcLogo = Array.of('https:', '', '://espncdn.com', 'i', 'teamlogos', 'leagues', '500', 'ufc.png').join('/');
-              fetchedGames.push({
-                league: 'UFC',
-                leagueTier: lg.tier,
-                favScore: 40,
-                isLive: state === 'in',
-                isFinal: state === 'post',
-                status: status,
-                away: { name: f1, score: c0.winner ? 'WIN' : '', logo: ufcLogo, record: '' },
-                home: { name: f2, score: c1.winner ? 'WIN' : '', logo: ufcLogo, record: '' }
-              });
+            if (lg.id === 'UFC') {
+              if (comp.competitors.length >= 2) {
+                const c0 = comp.competitors.at(0);
+                const c1 = comp.competitors.at(1);
+                const f1 = c0.athlete ? c0.athlete.displayName : 'Fighter 1';
+                const f2 = c1.athlete ? c1.athlete.displayName : 'Fighter 2';
+                const status = ev.status && ev.status.type ? ev.status.type.shortDetail : 'Scheduled';
+                const state = ev.status && ev.status.type ? ev.status.type.state : 'pre';
+                const ufcLogo = Array.of('https:', '', '://espncdn.com', 'i', 'teamlogos', 'leagues', '500', 'ufc.png').join('/');
+                fetchedGames.push({
+                  league: 'UFC',
+                  leagueTier: lg.tier,
+                  favScore: 40,
+                  isLive: state === 'in',
+                  isFinal: state === 'post',
+                  status: status,
+                  subtext: extractCardSubtext(comp, state),
+                  away: { name: f1, score: c0.winner ? 'WIN' : '', logo: ufcLogo, record: '' },
+                  home: { name: f2, score: c1.winner ? 'WIN' : '', logo: ufcLogo, record: '' }
+                });
+              }
+              continue;
             }
-            continue;
+
+            const homeComp = comp.competitors.find(c => c.homeAway === 'home') || comp.competitors.at(0);
+            const awayComp = comp.competitors.find(c => c.homeAway === 'away') || comp.competitors.at(1);
+            if (!homeComp || !awayComp) continue;
+
+            const homeName = (homeComp.team && (homeComp.team.shortDisplayName || homeComp.team.name)) || 'Home';
+            const awayName = (awayComp.team && (awayComp.team.shortDisplayName || awayComp.team.name)) || 'Away';
+            const homeFull = (homeComp.team && homeComp.team.displayName) || homeName;
+            const awayFull = (awayComp.team && awayComp.team.displayName) || awayName;
+
+            const bestFavScore = Math.min(getTeamPriority(homeFull), getTeamPriority(awayFull));
+            const state = ev.status && ev.status.type ? ev.status.type.state : 'pre';
+            const statusDetail = ev.status && ev.status.type ? ev.status.type.shortDetail : '';
+
+            const awayRec = (awayComp.records && awayComp.records.at(0)) ? awayComp.records.at(0).summary : '';
+            const homeRec = (homeComp.records && homeComp.records.at(0)) ? homeComp.records.at(0).summary : '';
+
+            fetchedGames.push({
+              league: lg.id,
+              leagueTier: lg.tier,
+              favScore: bestFavScore,
+              isLive: state === 'in',
+              isFinal: state === 'post',
+              status: statusDetail,
+              subtext: extractCardSubtext(comp, state),
+              away: {
+                name: awayName,
+                score: state === 'pre' ? '' : (awayComp.score || '0'),
+                logo: (awayComp.team && awayComp.team.logo) || '',
+                record: awayRec
+              },
+              home: {
+                name: homeName,
+                score: state === 'pre' ? '' : (homeComp.score || '0'),
+                logo: (homeComp.team && homeComp.team.logo) || '',
+                record: homeRec
+              }
+            });
           }
-
-          const homeComp = comp.competitors.find(c => c.homeAway === 'home') || comp.competitors.at(0);
-          const awayComp = comp.competitors.find(c => c.homeAway === 'away') || comp.competitors.at(1);
-          if (!homeComp || !awayComp) continue;
-
-          const homeName = (homeComp.team && (homeComp.team.shortDisplayName || homeComp.team.name)) || 'Home';
-          const awayName = (awayComp.team && (awayComp.team.shortDisplayName || awayComp.team.name)) || 'Away';
-          const homeFull = (homeComp.team && homeComp.team.displayName) || homeName;
-          const awayFull = (awayComp.team && awayComp.team.displayName) || awayName;
-
-          const bestFavScore = Math.min(getTeamPriority(homeFull), getTeamPriority(awayFull));
-          const state = ev.status && ev.status.type ? ev.status.type.state : 'pre';
-          const statusDetail = ev.status && ev.status.type ? ev.status.type.shortDetail : '';
-
-          const awayRec = (awayComp.records && awayComp.records.at(0)) ? awayComp.records.at(0).summary : '';
-          const homeRec = (homeComp.records && homeComp.records.at(0)) ? homeComp.records.at(0).summary : '';
-
-          const gameObj = {
-            league: lg.id,
-            leagueTier: lg.tier,
-            favScore: bestFavScore,
-            isLive: state === 'in',
-            isFinal: state === 'post',
-            status: statusDetail,
-            away: {
-              name: awayName,
-              score: state === 'pre' ? '' : (awayComp.score || '0'),
-              logo: (awayComp.team && awayComp.team.logo) || '',
-              record: awayRec
-            },
-            home: {
-              name: homeName,
-              score: state === 'pre' ? '' : (homeComp.score || '0'),
-              logo: (homeComp.team && homeComp.team.logo) || '',
-              record: homeRec
-            }
-          };
-
-          fetchedGames.push(gameObj);
-
-          const scoreSummary = state === 'pre'
-            ? (awayName + ' vs ' + homeName + ' (' + statusDetail + ')')
-            : (awayName + ' ' + gameObj.away.score + ' - ' + homeName + ' ' + gameObj.home.score + ' (' + statusDetail + ')');
-          wireHeadlines.push(lg.id + ': ' + scoreSummary);
         }
       } catch (e) {
-        console.warn('Skipped league:', lg.id, e);
+        console.warn('Skipped scoreboard:', lg.id, e);
       }
-      await sleep(150);
+
+      if (lg.tier <= 2) {
+        try {
+          const newsUrl = getNewsEndpoint(lg.sport, lg.slug);
+          const newsRes = await fetch(newsUrl);
+          if (newsRes.ok) {
+            const newsData = await newsRes.json();
+            const articles = (newsData && newsData.articles) ? newsData.articles.slice(0, 3) : Array.of();
+            for (const art of articles) {
+              if (art && art.headline) {
+                topStories.push(lg.id + ': ' + art.headline);
+              }
+            }
+          }
+        } catch (ne) {
+          // Ignore news fetch issue
+        }
+      }
+
+      await sleep(120);
     }
 
     fetchedGames.sort((a, b) => {
@@ -494,10 +562,10 @@
     allGames = fetchedGames;
 
     const tickerEl = document.getElementById('bottom-ticker');
-    if (wireHeadlines.length > 0) {
-      tickerEl.textContent = wireHeadlines.join('     •     ');
+    if (topStories.length > 0) {
+      tickerEl.textContent = topStories.join('     •     ');
     } else {
-      tickerEl.textContent = 'MONITORING MLB • NHL • CFL • NBA • NFL • UFC • INTERNATIONAL BASEBALL';
+      tickerEl.textContent = 'LIVE SPORTS DESK • MLB • NHL • CFL • NBA • NFL • UFC';
     }
     updateTickerSpeed();
 
@@ -543,6 +611,10 @@
       const homeClass = showWinner ? (homeScoreNum > awayScoreNum ? 'winner' : 'loser') : '';
       const delayStyle = 'animation-delay: ' + (idx * 85) + 'ms;';
 
+      const footerStatHtml = g.subtext
+        ? ('<div class="card-footer-stat"><span>' + g.subtext.label + '</span>' + g.subtext.text + '</div>')
+        : '';
+
       return '<div class="' + cardClass + '" style="' + delayStyle + '">' +
         '<div class="card-header">' +
           '<span class="league-tag">' + g.league + '</span>' +
@@ -564,6 +636,7 @@
           '</div>' +
           '<div class="team-score ' + homeClass + '">' + g.home.score + '</div>' +
         '</div>' +
+        footerStatHtml +
       '</div>';
     }).join('');
   }
