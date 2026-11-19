@@ -8,14 +8,14 @@
   @import url('https://googleapis.com');
 
   :root {
-    --bg-color: #000000;
-    --card-bg: #11141a;
-    --card-border: #222733;
-    --fav-tier1-border: #eab308;
-    --fav-tier1-bg: linear-gradient(145deg, #181c26 0%, #1f1b10 100%);
-    --fav-tier2-border: #3b82f6;
+    --bg-gradient: radial-gradient(circle at top right, #102a54 0%, #07142b 55%, #040b18 100%);
+    --card-bg: rgba(15, 35, 68, 0.88);
+    --card-border: rgba(56, 189, 248, 0.22);
+    --fav-tier1-border: #facc15;
+    --fav-tier1-bg: linear-gradient(145deg, rgba(23, 49, 92, 0.95) 0%, rgba(46, 40, 18, 0.92) 100%);
+    --fav-tier2-border: #38bdf8;
     --text-main: #ffffff;
-    --text-muted: #94a3b8;
+    --text-muted: #93c5fd;
     --live-red: #ef4444;
   }
 
@@ -26,23 +26,25 @@
   }
 
   body {
-    background-color: var(--bg-color);
+    background: var(--bg-gradient);
     color: var(--text-main);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     height: 100vh;
+    width: 100vw;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    padding: 22px 36px;
+    padding: 2vh 2.5vw;
   }
 
   header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-bottom: 14px;
-    border-bottom: 1px solid #1e2430;
-    margin-bottom: 22px;
+    padding-bottom: 1.2vh;
+    border-bottom: 1px solid rgba(56, 189, 248, 0.25);
+    margin-bottom: 1.8vh;
+    flex-shrink: 0;
   }
 
   .status-area {
@@ -60,6 +62,7 @@
     border-radius: 4px;
     letter-spacing: 1.5px;
     text-transform: uppercase;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
     animation: pulse 2s infinite;
   }
 
@@ -69,9 +72,9 @@
   }
 
   .league-pill {
-    background: #161b26;
-    border: 1px solid #263042;
-    color: #cbd5e1;
+    background: rgba(15, 38, 74, 0.9);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    color: #e0f2fe;
     font-size: 0.9rem;
     padding: 5px 14px;
     border-radius: 6px;
@@ -87,9 +90,9 @@
   }
 
   #clock-time {
-    font-size: 1.85rem;
+    font-size: 1.8rem;
     font-weight: 700;
-    color: #f8fafc;
+    color: #ffffff;
   }
 
   #clock-date {
@@ -98,25 +101,25 @@
     text-transform: uppercase;
     letter-spacing: 1px;
   }
-
   #scoreboard-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-    gap: 20px;
+    gap: 16px;
     flex-grow: 1;
-    align-content: start;
-    overflow: hidden;
+    min-height: 0;
+    width: 100%;
+    align-content: stretch;
   }
 
   .game-card {
     background: var(--card-bg);
     border: 1px solid var(--card-border);
     border-radius: 12px;
-    padding: 18px 22px;
+    padding: 14px 20px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+    box-shadow: 0 8px 24px rgba(2, 8, 23, 0.55);
+    min-height: 0;
   }
 
   .game-card.fav-tier1 {
@@ -132,8 +135,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 14px;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.8px;
@@ -141,6 +143,7 @@
 
   .league-tag {
     color: #38bdf8;
+    font-weight: 800;
   }
 
   .status-text {
@@ -156,41 +159,48 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 0;
+    padding: 4px 0;
   }
 
   .team-row:first-of-type {
-    border-bottom: 1px solid rgba(255,255,255,0.06);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.15);
   }
 
   .team-info {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
+    min-width: 0;
   }
 
   .team-logo {
-    width: 38px;
-    height: 38px;
+    width: 34px;
+    height: 34px;
     object-fit: contain;
+    flex-shrink: 0;
   }
 
   .team-name {
-    font-size: 1.35rem;
+    font-size: 1.25rem;
     font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .team-record {
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     color: var(--text-muted);
-    margin-left: 6px;
     font-weight: 400;
+    flex-shrink: 0;
   }
 
   .team-score {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 1.75rem;
+    font-size: 1.65rem;
     font-weight: 700;
+    margin-left: 12px;
+    flex-shrink: 0;
   }
 
   .winner {
@@ -198,18 +208,21 @@
   }
 
   .loser {
-    color: #64748b;
+    color: #7dd3fc;
+    opacity: 0.55;
   }
 
   footer {
-    margin-top: 20px;
-    background: #0f172a;
-    border-top: 2px solid #0284c7;
+    margin-top: 1.8vh;
+    background: rgba(8, 22, 46, 0.95);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-top: 2px solid #0ea5e9;
     border-radius: 8px;
-    height: 48px;
+    height: 46px;
     display: flex;
     align-items: center;
     overflow: hidden;
+    flex-shrink: 0;
   }
 
   .ticker-label {
@@ -220,7 +233,7 @@
     height: 100%;
     display: flex;
     align-items: center;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     letter-spacing: 1px;
     white-space: nowrap;
     z-index: 2;
@@ -230,15 +243,16 @@
     flex-grow: 1;
     overflow: hidden;
     white-space: nowrap;
+    position: relative;
   }
 
   .ticker-move {
     display: inline-block;
     padding-left: 100%;
-    animation: ticker 55s linear infinite;
+    animation: ticker 90s linear infinite;
     font-size: 1.05rem;
     font-weight: 600;
-    color: #e2e8f0;
+    color: #f0f9ff;
   }
 
   @keyframes ticker {
@@ -260,7 +274,7 @@
 <header>
   <div class="status-area">
     <div class="live-badge">LIVE</div>
-    <div class="league-pill" id="page-indicator">CONNECTING...</div>
+    <div class="league-pill" id="page-indicator">UPDATING...</div>
   </div>
   <div class="clock-area">
     <div id="clock-date">LOADING</div>
@@ -275,7 +289,7 @@
 <footer>
   <div class="ticker-label">UPCOMING &amp; WIRE</div>
   <div class="ticker-wrap">
-    <div class="ticker-move" id="bottom-ticker">Connecting to MLB, NHL, CFL, NBA, NFL, UFC &amp; International Baseball...</div>
+    <div class="ticker-move" id="bottom-ticker">Loading live schedules...</div>
   </div>
 </footer>
 <script>
@@ -295,7 +309,6 @@
 
   let allGames = Array.of();
   let currentPage = 0;
-  const CARDS_PER_PAGE = 9;
 
   function updateClock() {
     const now = new Date();
@@ -326,10 +339,41 @@
   function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
+
+  function isWithinActiveWindow(eventDateStr) {
+    if (!eventDateStr) return true;
+    const gameTime = new Date(eventDateStr).getTime();
+    if (isNaN(gameTime)) return true;
+    const now = Date.now();
+    const hoursDiff = (gameTime - now) / (1000 * 60 * 60);
+    return hoursDiff >= -24 && hoursDiff <= 36;
+  }
+
+  function calculateGridLayout() {
+    const grid = document.getElementById('scoreboard-grid');
+    const availableWidth = grid.clientWidth || window.innerWidth;
+    const availableHeight = grid.clientHeight || (window.innerHeight - 150);
+
+    const cols = Math.max(1, Math.floor((availableWidth + 16) / 356));
+    const rows = Math.max(1, Math.floor((availableHeight + 16) / 164));
+
+    grid.style.gridTemplateColumns = 'repeat(' + cols + ', minmax(0, 1fr))';
+    grid.style.gridTemplateRows = 'repeat(' + rows + ', minmax(0, 1fr))';
+
+    return cols * rows;
+  }
+
+  function updateTickerSpeed() {
+    const tickerEl = document.getElementById('bottom-ticker');
+    const containerWidth = tickerEl.parentElement.clientWidth || 1000;
+    const textWidth = tickerEl.scrollWidth || 2000;
+    const totalDistance = containerWidth + textWidth;
+    const durationSeconds = Math.max(25, Math.round(totalDistance / 95));
+    tickerEl.style.animationDuration = durationSeconds + 's';
+  }
   async function fetchAllSports() {
     let fetchedGames = Array.of();
     let wireHeadlines = Array.of();
-    let activeLeagueCount = 0;
 
     for (const lg of LEAGUES) {
       try {
@@ -339,9 +383,10 @@
 
         const data = await res.json();
         const events = (data && data.events) ? data.events : Array.of();
-        if (events.length > 0) activeLeagueCount++;
 
         for (const ev of events) {
+          if (!isWithinActiveWindow(ev.date)) continue;
+
           const comp = ev.competitions && ev.competitions.at(0);
           if (!comp || !comp.competitors) continue;
 
@@ -353,7 +398,7 @@
               const f2 = c1.athlete ? c1.athlete.displayName : 'Fighter 2';
               const status = ev.status && ev.status.type ? ev.status.type.shortDetail : 'Scheduled';
               const state = ev.status && ev.status.type ? ev.status.type.state : 'pre';
-              const ufcLogo = Array.of('https:', '', 'a.espncdn.com', 'i', 'teamlogos', 'leagues', '500', 'ufc.png').join('/');
+              const ufcLogo = Array.of('https:', '', '://espncdn.com', 'i', 'teamlogos', 'leagues', '500', 'ufc.png').join('/');
               fetchedGames.push({
                 league: 'UFC',
                 leagueTier: lg.tier,
@@ -426,34 +471,37 @@
 
     allGames = fetchedGames;
 
+    const tickerEl = document.getElementById('bottom-ticker');
     if (wireHeadlines.length > 0) {
-      document.getElementById('bottom-ticker').textContent = wireHeadlines.join('   •   ');
+      tickerEl.textContent = wireHeadlines.join('     •     ');
     } else {
-      document.getElementById('bottom-ticker').textContent = 'MONITORING MLB • NHL • CFL • NBA • NFL • UFC • INTERNATIONAL BASEBALL';
+      tickerEl.textContent = 'MONITORING MLB • NHL • CFL • NBA • NFL • UFC • INTERNATIONAL BASEBALL';
     }
+    updateTickerSpeed();
 
-    renderBoard(activeLeagueCount);
+    renderBoard();
   }
 
-  function renderBoard(activeLeagues) {
+  function renderBoard() {
     const grid = document.getElementById('scoreboard-grid');
     const indicator = document.getElementById('page-indicator');
+    const cardsPerPage = calculateGridLayout();
 
     if (allGames.length === 0) {
-      grid.innerHTML = '<div class="empty-state">No games scheduled right now across tracked leagues.<br><span style="font-size:1rem; margin-top:10px; display:block;">Auto-checking feeds every 45 seconds...</span></div>';
+      grid.innerHTML = '<div class="empty-state">No games within the active 24-hour window.<br><span style="font-size:1rem; margin-top:10px; display:block;">Auto-checking feeds every 45 seconds...</span></div>';
       indicator.textContent = 'STANDBY';
       return;
     }
 
-    const totalPages = Math.ceil(allGames.length / CARDS_PER_PAGE);
+    const totalPages = Math.ceil(allGames.length / cardsPerPage);
     if (currentPage >= totalPages) currentPage = 0;
 
-    const start = currentPage * CARDS_PER_PAGE;
-    const pageGames = allGames.slice(start, start + CARDS_PER_PAGE);
+    const start = currentPage * cardsPerPage;
+    const pageGames = allGames.slice(start, start + cardsPerPage);
 
     indicator.textContent = totalPages > 1
       ? ('PAGE ' + (currentPage + 1) + ' OF ' + totalPages + ' • ' + allGames.length + ' GAMES')
-      : (allGames.length + ' GAMES TODAY');
+      : (allGames.length + ' GAMES');
 
     grid.innerHTML = pageGames.map(g => {
       let cardClass = 'game-card';
@@ -492,11 +540,17 @@
     }).join('');
   }
 
+  window.addEventListener('resize', () => {
+    renderBoard();
+    updateTickerSpeed();
+  });
+
   setInterval(() => {
-    const totalPages = Math.ceil(allGames.length / CARDS_PER_PAGE);
+    const cardsPerPage = calculateGridLayout();
+    const totalPages = Math.ceil(allGames.length / cardsPerPage);
     if (totalPages > 1) {
       currentPage = (currentPage + 1) % totalPages;
-      renderBoard(0);
+      renderBoard();
     }
   }, 12000);
 
