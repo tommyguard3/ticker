@@ -743,7 +743,7 @@
       }
     }
 
-    recapSlides = collectedSlides.filter(slide => {
+       const validSlides = collectedSlides.filter(slide => {
       const pubMs = slide.published ? new Date(slide.published).getTime() : Date.now();
       const textLower = (slide.headline + ' ' + slide.description).toLowerCase();
       for (const entry of activeTeamStartTimes.entries()) {
@@ -754,7 +754,35 @@
         }
       }
       return true;
-    }).slice(0, 5);
+    });
+
+    // Group slides by league so we pick the #1 biggest story from each sport first
+    let byLeague = new Map();
+    for (const sl of validSlides) {
+      if (!byLeague.has(sl.league)) byLeague.set(sl.league, Array.of());
+      byLeague.get(sl.league).push(sl);
+    }
+
+    let mixedSlides = Array.of();
+    let round = 0;
+    while (mixedSlides.length < 5 && round < 4) {
+      for (const leagueSlides of byLeague.values()) {
+        if (round < leagueSlides.length && mixedSlides.length < 5) {
+          mixedSlides.push(leagueSlides.at(round));
+        }
+      }
+      round++;
+    }
+
+    // Boost any Toronto story to the very front of the recap
+    mixedSlides.sort((a, b) => {
+      const aTor = getTeamPriority(a.headline + ' ' + a.description) < 10 ? 0 : 1;
+      const bTor = getTeamPriority(b.headline + ' ' + b.description) < 10 ? 0 : 1;
+      return aTor - bTor;
+    });
+
+    recapSlides = mixedSlides;
+
 
     const tickerEl = document.getElementById('bottom-ticker');
     if (topStories.length > 0) {
@@ -846,7 +874,7 @@
     const headEl = document.getElementById('recap-headline');
     const subEl = document.getElementById('recap-subline');
 
-    const slidesToShow = recapSlides.slice(0, 4);
+    const slidesToShow = recapSlides.slice(0, 5);
     overlay.classList.add('active');
 
     for (const slide of slidesToShow) {
@@ -857,7 +885,7 @@
       badgeEl.textContent = slide.league + ' DESK RECAP';
       headEl.textContent = slide.headline;
       subEl.textContent = slide.description;
-      await sleep(10000);
+      await sleep(8000);
     }
 
     overlay.classList.remove('active');
