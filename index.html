@@ -142,9 +142,9 @@
     z-index: 2;
   }
 
-  @keyframes cardSlideIn {
-    0% { opacity: 0.35; transform: translateY(10px); }
-    100% { opacity: 1; transform: translateY(0); }
+   @keyframes cardSlideIn {
+    0% { opacity: 0.25; transform: scale(0.985); }
+    100% { opacity: 1; transform: scale(1); }
   }
 
   @keyframes scoreFlash {
@@ -173,7 +173,7 @@
 
   .game-card.is-live-card {
     border-color: rgba(74, 222, 128, 0.55);
-    animation: cardSlideIn 0.85s cubic-bezier(0.16, 1, 0.3, 1) both, liveBorderGlow 4s ease-in-out infinite;
+    animation: cardSlideIn 0.65s cubic-bezier(0.16, 1, 0.3, 1) both, liveBorderGlow 4s ease-in-out infinite;
   }
 
   .game-card.fav-tier1 {
