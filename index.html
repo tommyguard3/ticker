@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sports Scoreboard</title>
+<style>
+  @import url('https://googleapis.com');
+
+  :root {
+    --bg-color: #000000;
+    --card-bg: #11141a;
+    --card-border: #222733;
+    --fav-tier1-border: #eab308;
+    --fav-tier1-bg: linear-gradient(145deg, #181c26 0%, #1f1b10 100%);
+    --fav-tier2-border: #3b82f6;
+    --text-main: #ffffff;
+    --text-muted: #94a3b8;
+    --live-red: #ef4444;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 22px 36px;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #1e2430;
+    margin-bottom: 22px;
+  }
+
+  .status-area {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .live-badge {
+    background: var(--live-red);
+    color: white;
+    font-weight: 900;
+    font-size: 0.85rem;
+    padding: 5px 12px;
+    border-radius: 4px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.65; }
+  }
+
+  .league-pill {
+    background: #161b26;
+    border: 1px solid #263042;
+    color: #cbd5e1;
+    font-size: 0.9rem;
+    padding: 5px 14px;
+    border-radius: 6px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+  }
+
+  .clock-area {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  #clock-time {
+    font-size: 1.85rem;
+    font-weight: 700;
+    color: #f8fafc;
+  }
+
+  #clock-date {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  #scoreboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 20px;
+    flex-grow: 1;
+    align-content: start;
+    overflow: hidden;
+  }
+
+  .game-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 18px 22px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+  }
+
+  .game-card.fav-tier1 {
+    background: var(--fav-tier1-bg);
+    border: 2px solid var(--fav-tier1-border);
+  }
+
+  .game-card.fav-tier2 {
+    border: 2px solid var(--fav-tier2-border);
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+
+  .league-tag {
+    color: #38bdf8;
+  }
+
+  .status-text {
+    color: var(--text-muted);
+  }
+
+  .status-text.is-live {
+    color: #4ade80;
+    font-weight: 800;
+  }
+
+  .team-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+  }
+
+  .team-row:first-of-type {
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .team-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .team-logo {
+    width: 38px;
+    height: 38px;
+    object-fit: contain;
+  }
+
+  .team-name {
+    font-size: 1.35rem;
+    font-weight: 700;
+  }
+
+  .team-record {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-left: 6px;
+    font-weight: 400;
+  }
+
+  .team-score {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.75rem;
+    font-weight: 700;
+  }
+
+  .winner {
+    color: #ffffff;
+  }
+
+  .loser {
+    color: #64748b;
+  }
+
+  footer {
+    margin-top: 20px;
+    background: #0f172a;
+    border-top: 2px solid #0284c7;
+    border-radius: 8px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+  }
+
+  .ticker-label {
+    background: #0284c7;
+    color: white;
+    font-weight: 900;
+    padding: 0 20px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    font-size: 0.95rem;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    z-index: 2;
+  }
+
+  .ticker-wrap {
+    flex-grow: 1;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .ticker-move {
+    display: inline-block;
+    padding-left: 100%;
+    animation: ticker 45s linear infinite;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #e2e8f0;
+  }
+
+  @keyframes ticker {
+    0% { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(-100%, 0, 0); }
+  }
+
+  .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--text-muted);
+    font-size: 1.4rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="status-area">
+    <div class="live-badge">LIVE</div>
+    <div class="league-pill" id="page-indicator">UPDATING...</div>
+  </div>
+  <div class="clock-area">
+    <div id="clock-date">LOADING</div>
+    <div id="clock-time">--:--</div>
+  </div>
+</header>
+
+<main id="scoreboard-grid">
+  <div class="empty-state">Connecting to live sports feeds...</div>
+</main>
+
+<footer>
+  <div class="ticker-label">UPCOMING &amp; WIRE</div>
+  <div class="ticker-wrap">
+    <div class="ticker-move" id="bottom-ticker">Loading league schedules...</div>
+  </div>
+</footer>
+<script>
+  const LEAGUES = [
+    { id: 'MLB', tier: 1, url: 'https://espn.com' },
+    { id: 'NHL', tier: 1, url: 'https://espn.com' },
+    { id: 'CFL', tier: 1, url: 'https://espn.com' },
+    { id: 'NBA', tier: 2, url: 'https://espn.com' },
+    { id: 'NFL', tier: 2, url: 'https://espn.com' },
+    { id: 'UFC', tier: 2, url: 'https://espn.com' },
+    { id: 'WBC', tier: 3, url: 'https://espn.com' },
+    { id: 'CARIBBEAN', tier: 3, url: 'https://espn.com' }
+  ];
+
+  const TIER1_FAVS = ['Blue Jays', 'Toronto Blue Jays', 'Maple Leafs', 'Toronto Maple Leafs', 'Argonauts', 'Toronto Argonauts', 'Raptors', 'Toronto Raptors'];
+  const TIER2_FAVS = ['Wild', 'Minnesota Wild', 'Cardinals', 'St. Louis Cardinals'];
+
+  let allGames = [];
+  let currentPage = 0;
+  const CARDS_PER_PAGE = 9;
+
+  function updateClock() {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    const dateStr = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    document.getElementById('clock-time').textContent = timeStr;
+    document.getElementById('clock-date').textContent = dateStr;
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  function getTeamPriority(teamName) {
+    if (!teamName) return 99;
+    for (let i = 0; i < TIER1_FAVS.length; i++) {
+      if (teamName.toLowerCase().includes(TIER1_FAVS.at(i).toLowerCase())) return 1 + (i * 0.1);
+    }
+    for (let i = 0; i < TIER2_FAVS.length; i++) {
+      if (teamName.toLowerCase().includes(TIER2_FAVS.at(i).toLowerCase())) return 10 + (i * 0.1);
+    }
+    return 50;
+  }
+
+  async function fetchAllSports() {
+    let fetchedGames = [];
+    let tickerHeadlines = [];
+
+    for (const league of LEAGUES) {
+      try {
+        const res = await fetch(league.url);
+        if (!res.ok) continue;
+        const data = await res.json();
+        const events = data.events || [];
+
+        events.forEach(ev => {
+          const comp = ev.competitions?.at(0);
+          if (!comp) return;
+
+          if (league.id === 'UFC') {
+            const fighters = comp.competitors || [];
+            if (fighters.length >= 2) {
+              const f1 = fighters.at(0)?.athlete?.displayName || 'Fighter 1';
+              const f2 = fighters.at(1)?.athlete?.displayName || 'Fighter 2';
+              const status = ev.status?.type?.shortDetail || 'Scheduled';
+              const isLive = ev.status?.type?.state === 'in';
+              fetchedGames.push({
+                league: 'UFC',
+                leagueTier: league.tier,
+                favScore: 40,
+                isLive,
+                isFinal: ev.status?.type?.state === 'post',
+                status,
+                away: { name: f1, score: fighters.at(0)?.winner ? 'WIN' : '', logo: 'https://espncdn.com', record: '' },
+                home: { name: f2, score: fighters.at(1)?.winner ? 'WIN' : '', logo: 'https://espncdn.com', record: '' }
+              });
+            }
+            return;
+          }
+
+          const homeComp = comp.competitors?.find(c => c.homeAway === 'home') || comp.competitors?.at(0);
+          const awayComp = comp.competitors?.find(c => c.homeAway === 'away') || comp.competitors?.at(1);
+          if (!homeComp || !awayComp) return;
+
+          const homeName = homeComp.team?.shortDisplayName || homeComp.team?.name || 'Home';
+          const awayName = awayComp.team?.shortDisplayName || awayComp.team?.name || 'Away';
+          const homeFull = homeComp.team?.displayName || homeName;
+          const awayFull = awayComp.team?.displayName || awayName;
+
+          const p1 = getTeamPriority(homeFull);
+          const p2 = getTeamPriority(awayFull);
+          const bestFavScore = Math.min(p1, p2);
+
+          const state = ev.status?.type?.state;
+          const statusDetail = ev.status?.type?.shortDetail || '';
+
+          const gameObj = {
+            league: league.id,
+            leagueTier: league.tier,
+            favScore: bestFavScore,
+            isLive: state === 'in',
+            isFinal: state === 'post',
+            status: statusDetail,
+            away: {
+              name: awayName,
+              score: state === 'pre' ? '' : (awayComp.score || '0'),
+              logo: awayComp.team?.logo || '',
+              record: awayComp.records?.at(0)?.summary || ''
+            },
+            home: {
+              name: homeName,
+              score: state === 'pre' ? '' : (homeComp.score || '0'),
+              logo: homeComp.team?.logo || '',
+              record: homeComp.records?.at(0)?.summary || ''
+            }
+          };
+
+          fetchedGames.push(gameObj);
+
+          const scoreSummary = state === 'pre'
+            ? `${awayName} vs ${homeName} (${statusDetail})`
+            : `${awayName} ${gameObj.away.score} - ${homeName} ${gameObj.home.score} (${statusDetail})`;
+          tickerHeadlines.push(`${league.id}: ${scoreSummary}`);
+        });
+      } catch (err) {
+        console.warn(`Skipped ${league.id}:`, err);
+      }
+    }
+
+    fetchedGames.sort((a, b) => {
+      if (a.favScore !== b.favScore) return a.favScore - b.favScore;
+      if (a.isLive !== b.isLive) return a.isLive ? -1 : 1;
+      return a.leagueTier - b.leagueTier;
+    });
+
+    allGames = fetchedGames;
+
+    if (tickerHeadlines.length > 0) {
+      document.getElementById('bottom-ticker').textContent = tickerHeadlines.join('   •   ');
+    } else {
+      document.getElementById('bottom-ticker').textContent = 'Monitoring MLB, NHL, CFL, NBA, NFL, UFC & International Baseball...';
+    }
+
+    renderBoard();
+  }
+
+  function renderBoard() {
+    const grid = document.getElementById('scoreboard-grid');
+    const indicator = document.getElementById('page-indicator');
+
+    if (allGames.length === 0) {
+      grid.innerHTML = `<div class="empty-state">No games scheduled right now across tracked leagues.<br><span style="font-size:1rem; margin-top:10px; display:block;">Auto-checking feeds every 30 seconds...</span></div>`;
+      indicator.textContent = 'STANDBY';
+      return;
+    }
+
+    const totalPages = Math.ceil(allGames.length / CARDS_PER_PAGE);
+    if (currentPage >= totalPages) currentPage = 0;
+
+    const start = currentPage * CARDS_PER_PAGE;
+    const pageGames = allGames.slice(start, start + CARDS_PER_PAGE);
+
+    indicator.textContent = totalPages > 1 ? `PAGE ${currentPage + 1} OF ${totalPages}` : `${allGames.length} GAMES TODAY`;
+
+    grid.innerHTML = pageGames.map(g => {
+      let cardClass = 'game-card';
+      if (g.favScore < 10) {
+        cardClass += ' fav-tier1';
+      } else if (g.favScore < 50) {
+        cardClass += ' fav-tier2';
+      }
+
+      const awayScoreNum = parseInt(g.away.score, 10);
+      const homeScoreNum = parseInt(g.home.score, 10);
+      const showWinner = g.isFinal && !isNaN(awayScoreNum) && !isNaN(homeScoreNum);
+
+      const awayClass = showWinner ? (awayScoreNum > homeScoreNum ? 'winner' : 'loser') : '';
+      const homeClass = showWinner ? (homeScoreNum > awayScoreNum ? 'winner' : 'loser') : '';
+
+      return `
+        <div class="${cardClass}">
+          <div class="card-header">
+            <span class="league-tag">${g.league}</span>
+            <span class="status-text ${g.isLive ? 'is-live' : ''}">${g.status}</span>
+          </div>
+          <div class="team-row">
+            <div class="team-info">
+              <img class="team-logo" src="${g.away.logo}" onerror="this.style.display='none'">
+              <span class="team-name ${awayClass}">${g.away.name}</span>
+              <span class="team-record">${g.away.record}</span>
+            </div>
+            <div class="team-score ${awayClass}">${g.away.score}</div>
+          </div>
+          <div class="team-row">
+            <div class="team-info">
+              <img class="team-logo" src="${g.home.logo}" onerror="this.style.display='none'">
+              <span class="team-name ${homeClass}">${g.home.name}</span>
+              <span class="team-record">${g.home.record}</span>
+            </div>
+            <div class="team-score ${homeClass}">${g.home.score}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  setInterval(() => {
+    const totalPages = Math.ceil(allGames.length / CARDS_PER_PAGE);
+    if (totalPages > 1) {
+      currentPage = (currentPage + 1) % totalPages;
+      renderBoard();
+    }
+  }, 12000);
+
+  fetchAllSports();
+  setInterval(fetchAllSports, 30000);
+</script>
+
+</body>
+</html>
