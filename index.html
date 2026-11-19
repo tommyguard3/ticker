@@ -24,13 +24,46 @@
     padding: 0;
   }
 
-  @keyframes studioSweep {
+    @keyframes studioSweep {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
   }
 
+  @keyframes lightBeamSweep {
+    0% { transform: translateX(-45%) rotate(-22deg); opacity: 0.25; }
+    50% { transform: translateX(45%) rotate(-22deg); opacity: 0.65; }
+    100% { transform: translateX(-45%) rotate(-22deg); opacity: 0.25; }
+  }
+
   body {
+    background: linear-gradient(125deg, #030914 0%, #0d2f66 32%, #1d4ed8 50%, #092147 72%, #030914 100%);
+    background-size: 320% 320%;
+    animation: studioSweep 14s ease-in-out infinite;
+    color: var(--text-main);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 2.2vh 2.5vw;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(ellipse at center, rgba(56, 189, 248, 0.22) 0%, rgba(29, 78, 216, 0.08) 38%, transparent 65%);
+    animation: lightBeamSweep 12s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+
     background: linear-gradient(-45deg, #040b18, #0b2247, #06142e, #123366);
     background-size: 300% 300%;
     animation: studioSweep 22s ease infinite;
