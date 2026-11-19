@@ -4,48 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Live Sports Desk</title>
-    @keyframes cardSlideIn {
-    0% {
-      opacity: 0;
-      transform: translateY(14px) scale(0.98);
-    }
-    100% {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-  }
-
-  @keyframes scoreFlash {
-    0% { background-color: rgba(250, 204, 21, 0.45); transform: scale(1.03); }
-    100% { background-color: transparent; transform: scale(1); }
-  }
-
-  @keyframes liveBorderGlow {
-    0%, 100% { box-shadow: 0 8px 24px rgba(2, 8, 23, 0.55), 0 0 0px rgba(74, 222, 128, 0); }
-    50% { box-shadow: 0 8px 24px rgba(2, 8, 23, 0.55), 0 0 16px rgba(74, 222, 128, 0.28); }
-  }
-
-  .game-card {
-    animation: cardSlideIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
-    transition: transform 0.3s ease, border-color 0.3s ease;
-  }
-
-  .game-card.is-live-card {
-    border-color: rgba(74, 222, 128, 0.55);
-    animation: cardSlideIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both, liveBorderGlow 3.5s ease-in-out infinite;
-  }
-
-  .score-updated {
-    border-radius: 6px;
-    animation: scoreFlash 2.2s ease-out;
-  }
-
-  .ticker-label {
-    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
-    clip-path: polygon(0 0, 100% 0, 92% 100%, 0% 100%);
-    padding-right: 28px;
-  }
-  
 <style>
   @import url('https://googleapis.com');
 
@@ -152,6 +110,21 @@
     align-content: stretch;
   }
 
+  @keyframes cardSlideIn {
+    0% { opacity: 0; transform: translateY(14px) scale(0.98); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  @keyframes scoreFlash {
+    0% { background-color: rgba(250, 204, 21, 0.45); transform: scale(1.03); }
+    100% { background-color: transparent; transform: scale(1); }
+  }
+
+  @keyframes liveBorderGlow {
+    0%, 100% { box-shadow: 0 8px 24px rgba(2, 8, 23, 0.55), 0 0 0px rgba(74, 222, 128, 0); }
+    50% { box-shadow: 0 8px 24px rgba(2, 8, 23, 0.55), 0 0 16px rgba(74, 222, 128, 0.28); }
+  }
+
   .game-card {
     background: var(--card-bg);
     border: 1px solid var(--card-border);
@@ -162,6 +135,12 @@
     justify-content: space-between;
     box-shadow: 0 8px 24px rgba(2, 8, 23, 0.55);
     min-height: 0;
+    animation: cardSlideIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .game-card.is-live-card {
+    border-color: rgba(74, 222, 128, 0.55);
+    animation: cardSlideIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both, liveBorderGlow 3.5s ease-in-out infinite;
   }
 
   .game-card.fav-tier1 {
@@ -206,6 +185,11 @@
 
   .team-row:first-of-type {
     border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+  }
+
+  .score-updated {
+    border-radius: 6px;
+    animation: scoreFlash 2.2s ease-out;
   }
 
   .team-info {
@@ -268,10 +252,11 @@
   }
 
   .ticker-label {
-    background: #0284c7;
+    background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+    clip-path: polygon(0 0, 100% 0, 92% 100%, 0% 100%);
     color: white;
     font-weight: 900;
-    padding: 0 20px;
+    padding: 0 28px 0 20px;
     height: 100%;
     display: flex;
     align-items: center;
@@ -334,6 +319,7 @@
     <div class="ticker-move" id="bottom-ticker">Loading live schedules...</div>
   </div>
 </footer>
+
 <script>
   const LEAGUES = Array.of(
     { id: 'MLB', tier: 1, sport: 'baseball', slug: 'mlb' },
@@ -524,7 +510,6 @@
 
     renderBoard();
   }
-
   function renderBoard() {
     const grid = document.getElementById('scoreboard-grid');
     const indicator = document.getElementById('page-indicator');
