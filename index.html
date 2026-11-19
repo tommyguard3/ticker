@@ -8,9 +8,8 @@
   @import url('https://googleapis.com');
 
   :root {
-    --bg-gradient: radial-gradient(circle at top right, #102a54 0%, #07142b 55%, #040b18 100%);
-    --card-bg: rgba(15, 35, 68, 0.88);
-    --card-border: rgba(56, 189, 248, 0.22);
+    --card-bg: rgba(13, 32, 64, 0.88);
+    --card-border: rgba(56, 189, 248, 0.24);
     --fav-tier1-border: #facc15;
     --fav-tier1-bg: linear-gradient(145deg, rgba(23, 49, 92, 0.95) 0%, rgba(46, 40, 18, 0.92) 100%);
     --fav-tier2-border: #38bdf8;
@@ -25,8 +24,16 @@
     padding: 0;
   }
 
+  @keyframes studioSweep {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
   body {
-    background: var(--bg-gradient);
+    background: linear-gradient(-45deg, #040b18, #0b2247, #06142e, #123366);
+    background-size: 300% 300%;
+    animation: studioSweep 22s ease infinite;
     color: var(--text-main);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     height: 100vh;
@@ -35,6 +42,7 @@
     display: flex;
     flex-direction: column;
     padding: 2.2vh 2.5vw;
+    position: relative;
   }
 
   header {
@@ -45,6 +53,7 @@
     border-bottom: 1px solid rgba(56, 189, 248, 0.25);
     margin-bottom: 2vh;
     flex-shrink: 0;
+    z-index: 2;
   }
 
   .status-area {
@@ -109,6 +118,7 @@
     flex-grow: 1;
     min-height: 0;
     width: 100%;
+    z-index: 2;
   }
 
   @keyframes cardSlideIn {
@@ -260,6 +270,83 @@
     text-transform: uppercase;
   }
 
+  /* Framed Studio Photo Recap Overlay */
+  #recap-overlay {
+    position: fixed;
+    top: 9.8vh;
+    bottom: 9.8vh;
+    left: 2.5vw;
+    right: 2.5vw;
+    background: #06142e;
+    border: 2px solid rgba(56, 189, 248, 0.45);
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75);
+    z-index: 20;
+    display: none;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+  }
+
+  #recap-overlay.active {
+    display: flex;
+  }
+
+  @keyframes kenBurns {
+    0% { transform: scale(1) translate(0, 0); }
+    100% { transform: scale(1.07) translate(-1%, -1%); }
+  }
+
+  #recap-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.74;
+    animation: kenBurns 10s ease-out forwards;
+  }
+
+  .recap-scrim {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(4, 11, 24, 0.95) 0%, rgba(4, 11, 24, 0.4) 55%, rgba(4, 11, 24, 0.2) 100%);
+  }
+
+  .recap-content {
+    position: relative;
+    z-index: 2;
+    padding: 3.5vh 3.5vw;
+    max-width: 88%;
+  }
+
+  .recap-badge {
+    display: inline-block;
+    background: #dc2626;
+    color: white;
+    font-weight: 900;
+    font-size: 0.9rem;
+    padding: 5px 14px;
+    border-radius: 4px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  #recap-headline {
+    font-size: clamp(1.55rem, 2.7vw, 2.9rem);
+    font-weight: 900;
+    line-height: 1.15;
+    color: #ffffff;
+    text-shadow: 0 4px 16px rgba(0, 0, 0, 0.8);
+  }
+
+  #recap-subline {
+    font-size: clamp(0.95rem, 1.25vw, 1.3rem);
+    color: #93c5fd;
+    margin-top: 10px;
+    font-weight: 600;
+  }
   footer {
     margin-top: 2vh;
     background: rgba(8, 22, 46, 0.95);
@@ -271,6 +358,7 @@
     align-items: center;
     overflow: hidden;
     flex-shrink: 0;
+    z-index: 2;
   }
 
   .ticker-label {
@@ -339,13 +427,22 @@
   <div class="empty-state">Fetching live sports scores...</div>
 </main>
 
+<div id="recap-overlay">
+  <img id="recap-image" src="" alt="">
+  <div class="recap-scrim"></div>
+  <div class="recap-content">
+    <div class="recap-badge" id="recap-league-badge">SPORTS DESK RECAP</div>
+    <div id="recap-headline"></div>
+    <div id="recap-subline"></div>
+  </div>
+</div>
+
 <footer>
   <div class="ticker-label">TOP STORIES</div>
   <div class="ticker-wrap">
     <div class="ticker-move" id="bottom-ticker">Loading breaking sports headlines...</div>
   </div>
 </footer>
-
 <script>
   const LEAGUES = Array.of(
     { id: 'MLB', tier: 1, sport: 'baseball', slug: 'mlb' },
@@ -362,8 +459,10 @@
   const TIER2_FAVS = Array.of('Wild', 'Minnesota', 'Cardinals', 'St. Louis');
 
   let allGames = Array.of();
+  let recapSlides = Array.of();
   let currentPage = 0;
   let previousScores = new Map();
+  let isRecapPlaying = false;
   const CARDS_PER_PAGE = 6;
 
   function updateClock() {
@@ -411,7 +510,23 @@
     return hoursDiff >= -24 && hoursDiff <= 36;
   }
 
-  function extractCardSubtext(comp, state) {
+  function isValidFreshNews(art) {
+    if (!art || !art.headline) return false;
+    const lower = art.headline.toLowerCase();
+    if (lower.includes('highlight') || lower.includes('recap') || lower.startsWith('watch:') || lower.includes(' vs.') || lower.includes(' vs ')) {
+      return false;
+    }
+    if (art.published) {
+      const pubTime = new Date(art.published).getTime();
+      if (!isNaN(pubTime)) {
+        const ageHours = (Date.now() - pubTime) / (1000 * 60 * 60);
+        if (ageHours > 36 || ageHours < -2) return false;
+      }
+    }
+    return true;
+  }
+
+  function extractCardSubtext(comp, state, awayComp, homeComp) {
     if (state === 'pre') {
       const broadcasts = comp.broadcasts && comp.broadcasts.at(0);
       const tvNames = (broadcasts && broadcasts.names) ? broadcasts.names.join(' / ') : '';
@@ -419,7 +534,7 @@
       if (tvNames && venueName) return { label: 'TV', text: tvNames + ' • ' + venueName };
       if (tvNames) return { label: 'TV', text: tvNames };
       if (venueName) return { label: 'VENUE', text: venueName };
-      return null;
+      return { label: 'UPCOMING', text: 'SCHEDULED MATCHUP' };
     }
 
     const leaders = comp.leaders;
@@ -432,11 +547,24 @@
       }
     }
 
-    if (comp.headlines && comp.headlines.at(0) && comp.headlines.at(0).shortLinkText) {
-      return { label: 'RECAP', text: comp.headlines.at(0).shortLinkText };
+    const awayLines = awayComp && awayComp.linescores ? awayComp.linescores : Array.of();
+    const homeLines = homeComp && homeComp.linescores ? homeComp.linescores : Array.of();
+    if (awayLines.length > 0 && homeLines.length > 0) {
+      let periods = Array.of();
+      const count = Math.min(awayLines.length, homeLines.length, 4);
+      for (let i = 0; i < count; i++) {
+        const aVal = awayLines.at(i).value !== undefined ? awayLines.at(i).value : '-';
+        const hVal = homeLines.at(i).value !== undefined ? homeLines.at(i).value : '-';
+        periods.push('P' + (i + 1) + ': ' + aVal + '-' + hVal);
+      }
+      return { label: 'BOX', text: periods.join('  •  ') };
     }
 
-    return null;
+    if (comp.headlines && comp.headlines.at(0) && comp.headlines.at(0).shortLinkText) {
+      return { label: 'NOTE', text: comp.headlines.at(0).shortLinkText };
+    }
+
+    return { label: 'STATUS', text: state === 'in' ? 'IN PROGRESS' : 'FINAL SCORE' };
   }
 
   function updateTickerSpeed() {
@@ -450,6 +578,7 @@
   async function fetchAllSports() {
     let fetchedGames = Array.of();
     let topStories = Array.of();
+    let collectedSlides = Array.of();
 
     for (const lg of LEAGUES) {
       try {
@@ -481,9 +610,10 @@
                   isLive: state === 'in',
                   isFinal: state === 'post',
                   status: status,
-                  subtext: extractCardSubtext(comp, state),
-                  away: { name: f1, score: c0.winner ? 'WIN' : '', logo: ufcLogo, record: '' },
-                  home: { name: f2, score: c1.winner ? 'WIN' : '', logo: ufcLogo, record: '' }
+                  eventDate: ev.date || '',
+                  subtext: extractCardSubtext(comp, state, c0, c1),
+                  away: { name: f1, fullName: f1, score: c0.winner ? 'WIN' : '', logo: ufcLogo, record: '' },
+                  home: { name: f2, fullName: f2, score: c1.winner ? 'WIN' : '', logo: ufcLogo, record: '' }
                 });
               }
               continue;
@@ -512,15 +642,18 @@
               isLive: state === 'in',
               isFinal: state === 'post',
               status: statusDetail,
-              subtext: extractCardSubtext(comp, state),
+              eventDate: ev.date || '',
+              subtext: extractCardSubtext(comp, state, awayComp, homeComp),
               away: {
                 name: awayName,
+                fullName: awayFull,
                 score: state === 'pre' ? '' : (awayComp.score || '0'),
                 logo: (awayComp.team && awayComp.team.logo) || '',
                 record: awayRec
               },
               home: {
                 name: homeName,
+                fullName: homeFull,
                 score: state === 'pre' ? '' : (homeComp.score || '0'),
                 logo: (homeComp.team && homeComp.team.logo) || '',
                 record: homeRec
@@ -538,10 +671,23 @@
           const newsRes = await fetch(newsUrl);
           if (newsRes.ok) {
             const newsData = await newsRes.json();
-            const articles = (newsData && newsData.articles) ? newsData.articles.slice(0, 3) : Array.of();
+            const articles = (newsData && newsData.articles) ? newsData.articles : Array.of();
+            let addedForLeague = 0;
+
             for (const art of articles) {
-              if (art && art.headline) {
+              if (!isValidFreshNews(art)) continue;
+              if (addedForLeague < 3) {
                 topStories.push(lg.id + ': ' + art.headline);
+                addedForLeague++;
+              }
+              if (art.images && art.images.length > 0 && art.images.at(0).url) {
+                collectedSlides.push({
+                  league: lg.id,
+                  headline: art.headline,
+                  description: art.description || '',
+                  imageUrl: art.images.at(0).url,
+                  published: art.published || ''
+                });
               }
             }
           }
@@ -560,6 +706,30 @@
     });
 
     allGames = fetchedGames;
+
+    let activeTeamStartTimes = new Map();
+    for (const g of allGames) {
+      if (g.isLive || g.isFinal) {
+        const startMs = g.eventDate ? new Date(g.eventDate).getTime() : 0;
+        if (!isNaN(startMs) && startMs > 0) {
+          activeTeamStartTimes.set(g.away.name.toLowerCase(), startMs);
+          activeTeamStartTimes.set(g.home.name.toLowerCase(), startMs);
+        }
+      }
+    }
+
+    recapSlides = collectedSlides.filter(slide => {
+      const pubMs = slide.published ? new Date(slide.published).getTime() : Date.now();
+      const textLower = (slide.headline + ' ' + slide.description).toLowerCase();
+      for (const entry of activeTeamStartTimes.entries()) {
+        const teamKey = entry.at(0);
+        const gameStartMs = entry.at(1);
+        if (teamKey.length > 2 && textLower.includes(teamKey) && pubMs < gameStartMs) {
+          return false;
+        }
+      }
+      return true;
+    }).slice(0, 5);
 
     const tickerEl = document.getElementById('bottom-ticker');
     if (topStories.length > 0) {
@@ -641,17 +811,48 @@
     }).join('');
   }
 
+  async function triggerRecapBreak() {
+    if (isRecapPlaying || recapSlides.length === 0) return;
+
+    isRecapPlaying = true;
+    const overlay = document.getElementById('recap-overlay');
+    const imgEl = document.getElementById('recap-image');
+    const badgeEl = document.getElementById('recap-league-badge');
+    const headEl = document.getElementById('recap-headline');
+    const subEl = document.getElementById('recap-subline');
+
+    const slidesToShow = recapSlides.slice(0, 4);
+    overlay.classList.add('active');
+
+    for (const slide of slidesToShow) {
+      imgEl.style.animation = 'none';
+      void imgEl.offsetWidth;
+      imgEl.style.animation = 'kenBurns 10s ease-out forwards';
+      imgEl.src = slide.imageUrl;
+      badgeEl.textContent = slide.league + ' DESK RECAP';
+      headEl.textContent = slide.headline;
+      subEl.textContent = slide.description;
+      await sleep(10000);
+    }
+
+    overlay.classList.remove('active');
+    isRecapPlaying = false;
+  }
+
   window.addEventListener('resize', () => {
     updateTickerSpeed();
   });
 
   setInterval(() => {
+    if (isRecapPlaying) return;
     const totalPages = Math.ceil(allGames.length / CARDS_PER_PAGE);
     if (totalPages > 1) {
       currentPage = (currentPage + 1) % totalPages;
       renderBoard();
     }
   }, 12000);
+
+  setInterval(triggerRecapBreak, 1200000);
 
   fetchAllSports();
   setInterval(fetchAllSports, 45000);
