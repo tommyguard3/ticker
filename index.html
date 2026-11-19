@@ -468,6 +468,9 @@
     { id: 'MLB', tier: 1, sport: 'baseball', slug: 'mlb' },
     { id: 'NHL', tier: 1, sport: 'hockey', slug: 'nhl' },
     { id: 'CFL', tier: 1, sport: 'football', slug: 'cfl' },
+    { id: 'IIHF', tier: 1, sport: 'hockey', slug: 'world-championship' },
+    { id: 'OLYMPICS', tier: 1, sport: 'hockey', slug: 'mens-olympics' },
+    { id: 'OLYMPICS W', tier: 1, sport: 'hockey', slug: 'womens-olympics' },
     { id: 'NBA', tier: 2, sport: 'basketball', slug: 'nba' },
     { id: 'NFL', tier: 2, sport: 'football', slug: 'nfl' },
     { id: 'UFC', tier: 2, sport: 'mma', slug: 'ufc' },
@@ -475,7 +478,7 @@
     { id: 'WINTER BB', tier: 3, sport: 'baseball', slug: 'caribbean-series' }
   );
 
-  const TIER1_FAVS = Array.of('Blue Jays', 'Maple Leafs', 'Argonauts', 'Raptors', 'Toronto');
+  const TIER1_FAVS = Array.of('Blue Jays', 'Maple Leafs', 'Argonauts', 'Raptors', 'Toronto', 'Canada');
   const TIER2_FAVS = Array.of('Wild', 'Minnesota', 'Cardinals', 'St. Louis');
 
   let allGames = Array.of();
@@ -600,10 +603,11 @@
     const durationSeconds = Math.max(25, Math.round(totalDistance / 95));
     tickerEl.style.animationDuration = durationSeconds + 's';
   }
-  async function fetchAllSports() {
+    async function fetchAllSports() {
     let fetchedGames = Array.of();
     let topStories = Array.of();
     let collectedSlides = Array.of();
+    recapSlides = Array.of();
 
     for (const lg of LEAGUES) {
       try {
@@ -690,7 +694,7 @@
         console.warn('Skipped scoreboard:', lg.id, e);
       }
 
-      if (lg.tier <= 2) {
+      if (lg.tier <= 2 && !lg.id.startsWith('OLYMPICS') && lg.id !== 'WJC' && lg.id !== 'IIHF') {
         try {
           const newsUrl = getNewsEndpoint(lg.sport, lg.slug);
           const newsRes = await fetch(newsUrl);
@@ -721,9 +725,8 @@
         }
       }
 
-      await sleep(120);
+      await sleep(110);
     }
-
     fetchedGames.sort((a, b) => {
       if (a.favScore !== b.favScore) return a.favScore - b.favScore;
       if (a.isLive !== b.isLive) return a.isLive ? -1 : 1;
@@ -743,46 +746,80 @@
       }
     }
 
-       const validSlides = collectedSlides.filter(slide => {
-      const pubMs = slide.published ? new Date(slide.published).getTime() : Date.now();
-      const textLower = (slide.headline + ' ' + slide.description).toLowerCase();
-      for (const entry of activeTeamStartTimes.entries()) {
-        const teamKey = entry.at(0);
-        const gameStartMs = entry.at(1);
-        if (teamKey.length > 2 && textLower.includes(teamKey) && pubMs < gameStartMs) {
-          return false;
+    // 1. Check if Olympics are actively running: if so, all 5 recap slides come from Olympics
+    try {
+      const host = Array.of('site', 'web', 'api', 'espn', 'com').join('.');
+      const olyUrl = Array.of('https:', '', host, 'apis', 'site', 'v2', 'sports', 'olympics', 'news').join('/');
+      const olyRes = await fetch(olyUrl);
+      if (olyRes.ok) {
+        const olyData = await olyRes.json();
+        const olyArticles = (olyData && olyData.articles) ? olyData.articles : Array.of();
+        let olySlides = Array.of();
+        for (const art of olyArticles) {
+          if (!isValidFreshNews(art)) continue;
+          if (art.images && art.images.length > 0 && art.images.at(0).url) {
+            olySlides.push({
+              league: 'OLYMPICS',
+              headline: art.headline,
+              description: art.description || '',
+              imageUrl: art.images.at(0).url,
+              published: art.published || ''
+            });
+          }
+        }
+        if (olySlides.length >= 3) {
+          olySlides.sort((a, b) => {
+            const aCan = getTeamPriority(a.headline + ' ' + a.description) < 10 ? 0 : 1;
+            const bCan = getTeamPriority(b.headline + ' ' + b.description) < 10 ? 0 : 1;
+            return aCan - bCan;
+          });
+          recapSlides = olySlides.slice(0, 5);
         }
       }
-      return true;
-    });
-
-    // Group slides by league so we pick the #1 biggest story from each sport first
-    let byLeague = new Map();
-    for (const sl of validSlides) {
-      if (!byLeague.has(sl.league)) byLeague.set(sl.league, Array.of());
-      byLeague.get(sl.league).push(sl);
+    } catch (oe) {
+      // Fall through to standard 5-sport mix
     }
 
-    let mixedSlides = Array.of();
-    let round = 0;
-    while (mixedSlides.length < 5 && round < 4) {
-      for (const leagueSlides of byLeague.values()) {
-        if (round < leagueSlides.length && mixedSlides.length < 5) {
-          mixedSlides.push(leagueSlides.at(round));
+    // 2. Standard 5-sport mix when Olympics are not active
+    if (recapSlides.length === 0) {
+      const validSlides = collectedSlides.filter(slide => {
+        const pubMs = slide.published ? new Date(slide.published).getTime() : Date.now();
+        const textLower = (slide.headline + ' ' + slide.description).toLowerCase();
+        for (const entry of activeTeamStartTimes.entries()) {
+          const teamKey = entry.at(0);
+          const gameStartMs = entry.at(1);
+          if (teamKey.length > 2 && textLower.includes(teamKey) && pubMs < gameStartMs) {
+            return false;
+          }
         }
+        return true;
+      });
+
+      let byLeague = new Map();
+      for (const sl of validSlides) {
+        if (!byLeague.has(sl.league)) byLeague.set(sl.league, Array.of());
+        byLeague.get(sl.league).push(sl);
       }
-      round++;
+
+      let mixedSlides = Array.of();
+      let round = 0;
+      while (mixedSlides.length < 5 && round < 4) {
+        for (const leagueSlides of byLeague.values()) {
+          if (round < leagueSlides.length && mixedSlides.length < 5) {
+            mixedSlides.push(leagueSlides.at(round));
+          }
+        }
+        round++;
+      }
+
+      mixedSlides.sort((a, b) => {
+        const aTor = getTeamPriority(a.headline + ' ' + a.description) < 10 ? 0 : 1;
+        const bTor = getTeamPriority(b.headline + ' ' + b.description) < 10 ? 0 : 1;
+        return aTor - bTor;
+      });
+
+      recapSlides = mixedSlides;
     }
-
-    // Boost any Toronto story to the very front of the recap
-    mixedSlides.sort((a, b) => {
-      const aTor = getTeamPriority(a.headline + ' ' + a.description) < 10 ? 0 : 1;
-      const bTor = getTeamPriority(b.headline + ' ' + b.description) < 10 ? 0 : 1;
-      return aTor - bTor;
-    });
-
-    recapSlides = mixedSlides;
-
 
     const tickerEl = document.getElementById('bottom-ticker');
     if (topStories.length > 0) {
@@ -794,6 +831,7 @@
 
     renderBoard();
   }
+
   function renderBoard() {
     const grid = document.getElementById('scoreboard-grid');
     const indicator = document.getElementById('page-indicator');
