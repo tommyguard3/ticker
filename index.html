@@ -331,8 +331,11 @@
 
     const scheduleTasks = LEAGUES.map(async (lg) => {
       try {
-        const apiUrl = 'https://thesportsdb.com' + todayStr + '&s=' + encodeURIComponent(lg.sport);
-        const res = await fetch(apiUrl);
+      const endpoint = new URL('https://thesportsdb.com');
+        endpoint.pathname = ['api', 'v1', 'json', '3', 'eventsday.php'].join('/');
+        endpoint.searchParams.set('d', todayStr);
+        endpoint.searchParams.set('s', lg.sport);
+        const res = await fetch(endpoint.toString());
         if (!res.ok) return;
         const data = await res.json();
         const events = data.events || Array.of();
