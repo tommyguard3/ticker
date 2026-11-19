@@ -34,16 +34,16 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    padding: 2vh 2.5vw;
+    padding: 2.2vh 2.5vw;
   }
 
   header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-bottom: 1.2vh;
+    padding-bottom: 1.4vh;
     border-bottom: 1px solid rgba(56, 189, 248, 0.25);
-    margin-bottom: 1.8vh;
+    margin-bottom: 2vh;
     flex-shrink: 0;
   }
 
@@ -57,18 +57,18 @@
     background: var(--live-red);
     color: white;
     font-weight: 900;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     padding: 5px 12px;
     border-radius: 4px;
     letter-spacing: 1.5px;
     text-transform: uppercase;
     box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
-    animation: pulse 2s infinite;
+    animation: pulse 2.5s infinite;
   }
 
   @keyframes pulse {
     0%, 100% { opacity: 1; }
-    50% { opacity: 0.65; }
+    50% { opacity: 0.7; }
   }
 
   .league-pill {
@@ -90,7 +90,7 @@
   }
 
   #clock-time {
-    font-size: 1.8rem;
+    font-size: 1.85rem;
     font-weight: 700;
     color: #ffffff;
   }
@@ -103,20 +103,21 @@
   }
   #scoreboard-grid {
     display: grid;
-    gap: 16px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    gap: 2.2vh 1.8vw;
     flex-grow: 1;
     min-height: 0;
     width: 100%;
-    align-content: stretch;
   }
 
   @keyframes cardSlideIn {
-    0% { opacity: 0; transform: translateY(14px) scale(0.98); }
-    100% { opacity: 1; transform: translateY(0) scale(1); }
+    0% { opacity: 0.35; transform: translateY(10px); }
+    100% { opacity: 1; transform: translateY(0); }
   }
 
   @keyframes scoreFlash {
-    0% { background-color: rgba(250, 204, 21, 0.45); transform: scale(1.03); }
+    0% { background-color: rgba(250, 204, 21, 0.45); transform: scale(1.02); }
     100% { background-color: transparent; transform: scale(1); }
   }
 
@@ -128,19 +129,20 @@
   .game-card {
     background: var(--card-bg);
     border: 1px solid var(--card-border);
-    border-radius: 12px;
-    padding: 14px 20px;
+    border-radius: 14px;
+    padding: 2vh 1.8vw;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     box-shadow: 0 8px 24px rgba(2, 8, 23, 0.55);
     min-height: 0;
-    animation: cardSlideIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+    overflow: hidden;
+    animation: cardSlideIn 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   .game-card.is-live-card {
     border-color: rgba(74, 222, 128, 0.55);
-    animation: cardSlideIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both, liveBorderGlow 3.5s ease-in-out infinite;
+    animation: cardSlideIn 0.85s cubic-bezier(0.16, 1, 0.3, 1) both, liveBorderGlow 4s ease-in-out infinite;
   }
 
   .game-card.fav-tier1 {
@@ -156,7 +158,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 0.82rem;
+    font-size: clamp(0.8rem, 1.1vw, 1rem);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.8px;
@@ -180,11 +182,11 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 4px 0;
+    padding: 1vh 0;
   }
 
   .team-row:first-of-type {
-    border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.16);
   }
 
   .score-updated {
@@ -195,19 +197,19 @@
   .team-info {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 1vw;
     min-width: 0;
   }
 
   .team-logo {
-    width: 34px;
-    height: 34px;
+    width: clamp(32px, 3.2vw, 52px);
+    height: clamp(32px, 3.2vw, 52px);
     object-fit: contain;
     flex-shrink: 0;
   }
 
   .team-name {
-    font-size: 1.25rem;
+    font-size: clamp(1.15rem, 1.65vw, 1.85rem);
     font-weight: 700;
     white-space: nowrap;
     overflow: hidden;
@@ -215,7 +217,7 @@
   }
 
   .team-record {
-    font-size: 0.82rem;
+    font-size: clamp(0.78rem, 0.95vw, 1rem);
     color: var(--text-muted);
     font-weight: 400;
     flex-shrink: 0;
@@ -223,7 +225,7 @@
 
   .team-score {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 1.65rem;
+    font-size: clamp(1.6rem, 2.4vw, 2.6rem);
     font-weight: 700;
     margin-left: 12px;
     flex-shrink: 0;
@@ -239,12 +241,12 @@
   }
 
   footer {
-    margin-top: 1.8vh;
+    margin-top: 2vh;
     background: rgba(8, 22, 46, 0.95);
     border: 1px solid rgba(56, 189, 248, 0.3);
     border-top: 2px solid #0ea5e9;
     border-radius: 8px;
-    height: 46px;
+    height: 48px;
     display: flex;
     align-items: center;
     overflow: hidden;
@@ -289,8 +291,12 @@
 
   .empty-state {
     grid-column: 1 / -1;
+    grid-row: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
     text-align: center;
-    padding: 80px 20px;
     color: var(--text-muted);
     font-size: 1.4rem;
   }
@@ -338,6 +344,7 @@
   let allGames = Array.of();
   let currentPage = 0;
   let previousScores = new Map();
+  const CARDS_PER_PAGE = 6;
 
   function updateClock() {
     const now = new Date();
@@ -376,20 +383,6 @@
     const now = Date.now();
     const hoursDiff = (gameTime - now) / (1000 * 60 * 60);
     return hoursDiff >= -24 && hoursDiff <= 36;
-  }
-
-  function calculateGridLayout() {
-    const grid = document.getElementById('scoreboard-grid');
-    const availableWidth = grid.clientWidth || window.innerWidth;
-    const availableHeight = grid.clientHeight || (window.innerHeight - 150);
-
-    const cols = Math.max(1, Math.floor((availableWidth + 16) / 356));
-    const rows = Math.max(1, Math.floor((availableHeight + 16) / 164));
-
-    grid.style.gridTemplateColumns = 'repeat(' + cols + ', minmax(0, 1fr))';
-    grid.style.gridTemplateRows = 'repeat(' + rows + ', minmax(0, 1fr))';
-
-    return cols * rows;
   }
 
   function updateTickerSpeed() {
@@ -513,7 +506,6 @@
   function renderBoard() {
     const grid = document.getElementById('scoreboard-grid');
     const indicator = document.getElementById('page-indicator');
-    const cardsPerPage = calculateGridLayout();
 
     if (allGames.length === 0) {
       grid.innerHTML = '<div class="empty-state">No games within the active 24-hour window.<br><span style="font-size:1rem; margin-top:10px; display:block;">Auto-checking feeds every 45 seconds...</span></div>';
@@ -521,11 +513,11 @@
       return;
     }
 
-    const totalPages = Math.ceil(allGames.length / cardsPerPage);
+    const totalPages = Math.ceil(allGames.length / CARDS_PER_PAGE);
     if (currentPage >= totalPages) currentPage = 0;
 
-    const start = currentPage * cardsPerPage;
-    const pageGames = allGames.slice(start, start + cardsPerPage);
+    const start = currentPage * CARDS_PER_PAGE;
+    const pageGames = allGames.slice(start, start + CARDS_PER_PAGE);
 
     indicator.textContent = totalPages > 1
       ? ('PAGE ' + (currentPage + 1) + ' OF ' + totalPages + ' • ' + allGames.length + ' GAMES')
@@ -549,7 +541,7 @@
 
       const awayClass = showWinner ? (awayScoreNum > homeScoreNum ? 'winner' : 'loser') : '';
       const homeClass = showWinner ? (homeScoreNum > awayScoreNum ? 'winner' : 'loser') : '';
-      const delayStyle = 'animation-delay: ' + (idx * 45) + 'ms;';
+      const delayStyle = 'animation-delay: ' + (idx * 85) + 'ms;';
 
       return '<div class="' + cardClass + '" style="' + delayStyle + '">' +
         '<div class="card-header">' +
@@ -577,13 +569,11 @@
   }
 
   window.addEventListener('resize', () => {
-    renderBoard();
     updateTickerSpeed();
   });
 
   setInterval(() => {
-    const cardsPerPage = calculateGridLayout();
-    const totalPages = Math.ceil(allGames.length / cardsPerPage);
+    const totalPages = Math.ceil(allGames.length / CARDS_PER_PAGE);
     if (totalPages > 1) {
       currentPage = (currentPage + 1) % totalPages;
       renderBoard();
