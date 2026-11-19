@@ -317,25 +317,31 @@
     return 50;
   }
 
-  function buildDirectEspnUrl(sport, slug) {
-    const host = Array.of('site', 'api', 'espn', 'com').join('.');
-    const path = Array.of('apis', 'site', 'v2', 'sports', sport, slug, 'scoreboard').join('/');
-    return 'https://' + host + '/' + path;
+  function getScoreboardEndpoint(sport, slug) {
+    const host = Array.of('site', 'web', 'api', 'espn', 'com').join('.');
+    const parts = Array.of('https:', '', host, 'apis', 'site', 'v2', 'sports', sport, slug, 'scoreboard');
+    return parts.join('/');
   }
 
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
   async function fetchAllSports() {
     let fetchedGames = Array.of();
     let wireHeadlines = Array.of();
+    let activeLeagueCount = 0;
 
-    const leagueTasks = LEAGUES.map(async (lg) => {
+    for (const lg of LEAGUES) {
       try {
-        const directUrl = buildDirectEspnUrl(lg.sport, lg.slug);
-        const res = await fetch(directUrl);
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!data || !data.events) return;
+        const endpoint = getScoreboardEndpoint(lg.sport, lg.slug);
+        const res = await fetch(endpoint);
+        if (!res.ok) continue;
 
-        for (const ev of data.events) {
+        const data = await res.json();
+        const events = (data && data.events) ? data.events : Array.of();
+        if (events.length > 0) activeLeagueCount++;
+
+        for (const ev of events) {
           const comp = ev.competitions && ev.competitions.at(0);
           if (!comp || !comp.competitors) continue;
 
@@ -347,6 +353,7 @@
               const f2 = c1.athlete ? c1.athlete.displayName : 'Fighter 2';
               const status = ev.status && ev.status.type ? ev.status.type.shortDetail : 'Scheduled';
               const state = ev.status && ev.status.type ? ev.status.type.state : 'pre';
+              const ufcLogo = Array.of('https:', '', 'a.espncdn.com', 'i', 'teamlogos', 'leagues', '500', 'ufc.png').join('/');
               fetchedGames.push({
                 league: 'UFC',
                 leagueTier: lg.tier,
@@ -354,8 +361,8 @@
                 isLive: state === 'in',
                 isFinal: state === 'post',
                 status: status,
-                away: { name: f1, score: c0.winner ? 'WIN' : '', logo: 'https://espncdn.com', record: '' },
-                home: { name: f2, score: c1.winner ? 'WIN' : '', logo: 'https://espncdn.com', record: '' }
+                away: { name: f1, score: c0.winner ? 'WIN' : '', logo: ufcLogo, record: '' },
+                home: { name: f2, score: c1.winner ? 'WIN' : '', logo: ufcLogo, record: '' }
               });
             }
             continue;
@@ -406,11 +413,10 @@
           wireHeadlines.push(lg.id + ': ' + scoreSummary);
         }
       } catch (e) {
-        console.log('Feed skipped:', lg.id);
+        console.warn('Skipped league:', lg.id, e);
       }
-    });
-
-    await Promise.all(leagueTasks);
+      await sleep(150);
+    }
 
     fetchedGames.sort((a, b) => {
       if (a.favScore !== b.favScore) return a.favScore - b.favScore;
@@ -423,18 +429,18 @@
     if (wireHeadlines.length > 0) {
       document.getElementById('bottom-ticker').textContent = wireHeadlines.join('   •   ');
     } else {
-      document.getElementById('bottom-ticker').textContent = 'LIVE SCOREBOARD ACTIVE • MLB • NHL • CFL • NBA • NFL • UFC';
+      document.getElementById('bottom-ticker').textContent = 'MONITORING MLB • NHL • CFL • NBA • NFL • UFC • INTERNATIONAL BASEBALL';
     }
 
-    renderBoard();
+    renderBoard(activeLeagueCount);
   }
 
-  function renderBoard() {
+  function renderBoard(activeLeagues) {
     const grid = document.getElementById('scoreboard-grid');
     const indicator = document.getElementById('page-indicator');
 
     if (allGames.length === 0) {
-      grid.innerHTML = '<div class="empty-state">No games scheduled right now across tracked leagues.<br><span style="font-size:1rem; margin-top:10px; display:block;">Auto-checking feeds every 30 seconds...</span></div>';
+      grid.innerHTML = '<div class="empty-state">No games scheduled right now across tracked leagues.<br><span style="font-size:1rem; margin-top:10px; display:block;">Auto-checking feeds every 45 seconds...</span></div>';
       indicator.textContent = 'STANDBY';
       return;
     }
@@ -445,7 +451,9 @@
     const start = currentPage * CARDS_PER_PAGE;
     const pageGames = allGames.slice(start, start + CARDS_PER_PAGE);
 
-    indicator.textContent = totalPages > 1 ? ('PAGE ' + (currentPage + 1) + ' OF ' + totalPages) : (allGames.length + ' GAMES TODAY');
+    indicator.textContent = totalPages > 1
+      ? ('PAGE ' + (currentPage + 1) + ' OF ' + totalPages + ' • ' + allGames.length + ' GAMES')
+      : (allGames.length + ' GAMES TODAY');
 
     grid.innerHTML = pageGames.map(g => {
       let cardClass = 'game-card';
@@ -488,12 +496,12 @@
     const totalPages = Math.ceil(allGames.length / CARDS_PER_PAGE);
     if (totalPages > 1) {
       currentPage = (currentPage + 1) % totalPages;
-      renderBoard();
+      renderBoard(0);
     }
   }, 12000);
 
   fetchAllSports();
-  setInterval(fetchAllSports, 30000);
+  setInterval(fetchAllSports, 45000);
 </script>
 </body>
 </html>
