@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Live Sports Desk</title>
+<link rel="icon" href="data:,">
 <style>
   @import url('https://googleapis.com');
 
@@ -24,22 +25,22 @@
     padding: 0;
   }
 
-    @keyframes studioSweep {
+  @keyframes studioSweep {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
   }
 
   @keyframes lightBeamSweep {
-    0% { transform: translateX(-45%) rotate(-22deg); opacity: 0.25; }
-    50% { transform: translateX(45%) rotate(-22deg); opacity: 0.65; }
-    100% { transform: translateX(-45%) rotate(-22deg); opacity: 0.25; }
+    0% { transform: translateX(-48%) rotate(-22deg); opacity: 0.38; }
+    50% { transform: translateX(48%) rotate(-22deg); opacity: 0.85; }
+    100% { transform: translateX(-48%) rotate(-22deg); opacity: 0.38; }
   }
 
   body {
-    background: linear-gradient(125deg, #030914 0%, #0d2f66 32%, #1d4ed8 50%, #092147 72%, #030914 100%);
-    background-size: 320% 320%;
-    animation: studioSweep 14s ease-in-out infinite;
+    background: linear-gradient(125deg, #020813 0%, #0e387a 28%, #2563eb 50%, #0a2654 74%, #020813 100%);
+    background-size: 300% 300%;
+    animation: studioSweep 11s ease-in-out infinite;
     color: var(--text-main);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     height: 100vh;
@@ -58,32 +59,19 @@
     left: -50%;
     width: 200%;
     height: 200%;
-    background: radial-gradient(ellipse at center, rgba(56, 189, 248, 0.22) 0%, rgba(29, 78, 216, 0.08) 38%, transparent 65%);
-    animation: lightBeamSweep 12s ease-in-out infinite;
+    background: radial-gradient(ellipse at center, rgba(56, 189, 248, 0.32) 0%, rgba(37, 99, 235, 0.14) 38%, transparent 65%);
+    animation: lightBeamSweep 10s ease-in-out infinite;
     pointer-events: none;
     z-index: 0;
-  }
-
-    background: linear-gradient(-45deg, #040b18, #0b2247, #06142e, #123366);
-    background-size: 300% 300%;
-    animation: studioSweep 22s ease infinite;
-    color: var(--text-main);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    height: 100vh;
-    width: 100vw;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    padding: 2.2vh 2.5vw;
-    position: relative;
   }
 
   header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    width: 100%;
     padding-bottom: 1.4vh;
-    border-bottom: 1px solid rgba(56, 189, 248, 0.25);
+    border-bottom: 1px solid rgba(56, 189, 248, 0.35);
     margin-bottom: 2vh;
     flex-shrink: 0;
     z-index: 2;
@@ -303,7 +291,6 @@
     text-transform: uppercase;
   }
 
-  /* Framed Studio Photo Recap Overlay */
   #recap-overlay {
     position: fixed;
     top: 9.8vh;
@@ -546,8 +533,13 @@
   function isValidFreshNews(art) {
     if (!art || !art.headline) return false;
     const lower = art.headline.toLowerCase();
-    if (lower.includes('highlight') || lower.includes('recap') || lower.startsWith('watch:') || lower.includes(' vs.') || lower.includes(' vs ')) {
-      return false;
+    const blockedTerms = Array.of(
+      'highlight', 'recap', 'watch:', ' vs.', ' vs ',
+      'tracker', 'fantasy', 'mock draft', 'power rankings',
+      'how to watch', 'odds', 'picks', 'predictions', 'standings', 'schedule'
+    );
+    for (const term of blockedTerms) {
+      if (lower.includes(term)) return false;
     }
     if (art.published) {
       const pubTime = new Date(art.published).getTime();
