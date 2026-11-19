@@ -280,14 +280,14 @@
 </footer>
 <script>
   const LEAGUES = Array.of(
-    { id: 'MLB', tier: 1, sport: 'baseball', slug: 'mlb', rss: 'https://espn.com' },
-    { id: 'NHL', tier: 1, sport: 'hockey', slug: 'nhl', rss: 'https://espn.com' },
-    { id: 'CFL', tier: 1, sport: 'football', slug: 'cfl', rss: 'https://espn.com' },
-    { id: 'NBA', tier: 2, sport: 'basketball', slug: 'nba', rss: 'https://espn.com' },
-    { id: 'NFL', tier: 2, sport: 'football', slug: 'nfl', rss: 'https://espn.com' },
-    { id: 'UFC', tier: 2, sport: 'mma', slug: 'ufc', rss: 'https://espn.com' },
-    { id: 'WBC', tier: 3, sport: 'baseball', slug: 'world-baseball-classic', rss: 'https://espn.com' },
-    { id: 'WINTER BB', tier: 3, sport: 'baseball', slug: 'caribbean-series', rss: 'https://espn.com' }
+    { id: 'MLB', tier: 1, sport: 'baseball', slug: 'mlb' },
+    { id: 'NHL', tier: 1, sport: 'hockey', slug: 'nhl' },
+    { id: 'CFL', tier: 1, sport: 'football', slug: 'cfl' },
+    { id: 'NBA', tier: 2, sport: 'basketball', slug: 'nba' },
+    { id: 'NFL', tier: 2, sport: 'football', slug: 'nfl' },
+    { id: 'UFC', tier: 2, sport: 'mma', slug: 'ufc' },
+    { id: 'WBC', tier: 3, sport: 'baseball', slug: 'world-baseball-classic' },
+    { id: 'WINTER BB', tier: 3, sport: 'baseball', slug: 'caribbean-series' }
   );
 
   const TIER1_FAVS = Array.of('Blue Jays', 'Maple Leafs', 'Argonauts', 'Raptors', 'Toronto');
@@ -317,140 +317,100 @@
     return 50;
   }
 
-  function buildEspnScoreboardUrl(sport, slug) {
-    const u = new URL('https://espn.com');
-    u.pathname = Array.of('apis', 'site', 'v2', 'sports', sport, slug, 'scoreboard').join('/');
-    return u.toString();
+  function buildDirectEspnUrl(sport, slug) {
+    const host = Array.of('site', 'api', 'espn', 'com').join('.');
+    const path = Array.of('apis', 'site', 'v2', 'sports', sport, slug, 'scoreboard').join('/');
+    return 'https://' + host + '/' + path;
   }
 
-  async function fetchJsonViaCorsWrapper(targetUrl) {
-    try {
-      const ao = new URL('https://allorigins.win');
-      ao.pathname = Array.of('get').join('/');
-      ao.searchParams.set('url', targetUrl);
-      const res = await fetch(ao.toString());
-      if (res.ok) {
-        const wrapper = await res.json();
-        if (wrapper && wrapper.contents) {
-          return JSON.parse(wrapper.contents);
-        }
-      }
-    } catch (e) {
-      // Fall through to Route 2
-    }
-
-    try {
-      const ct = new URL('https://codetabs.com');
-      ct.pathname = Array.of('v1', 'proxy').join('/');
-      ct.searchParams.set('quest', targetUrl);
-      const res2 = await fetch(ct.toString());
-      if (res2.ok) return await res2.json();
-    } catch (e2) {
-      // Ignore
-    }
-    return null;
-  }
   async function fetchAllSports() {
     let fetchedGames = Array.of();
     let wireHeadlines = Array.of();
 
     const leagueTasks = LEAGUES.map(async (lg) => {
-      const targetUrl = buildEspnScoreboardUrl(lg.sport, lg.slug);
-      const data = await fetchJsonViaCorsWrapper(targetUrl);
-      if (!data || !data.events) return;
-
-      for (const ev of data.events) {
-        const comp = ev.competitions && ev.competitions.at(0);
-        if (!comp || !comp.competitors) continue;
-
-        if (lg.id === 'UFC') {
-          if (comp.competitors.length >= 2) {
-            const c0 = comp.competitors.at(0);
-            const c1 = comp.competitors.at(1);
-            const f1 = c0.athlete ? c0.athlete.displayName : 'Fighter 1';
-            const f2 = c1.athlete ? c1.athlete.displayName : 'Fighter 2';
-            const status = ev.status && ev.status.type ? ev.status.type.shortDetail : 'Scheduled';
-            const state = ev.status && ev.status.type ? ev.status.type.state : 'pre';
-            fetchedGames.push({
-              league: 'UFC',
-              leagueTier: lg.tier,
-              favScore: 40,
-              isLive: state === 'in',
-              isFinal: state === 'post',
-              status: status,
-              away: { name: f1, score: c0.winner ? 'WIN' : '', logo: 'https://espncdn.com', record: '' },
-              home: { name: f2, score: c1.winner ? 'WIN' : '', logo: 'https://espncdn.com', record: '' }
-            });
-          }
-          continue;
-        }
-
-        const homeComp = comp.competitors.find(c => c.homeAway === 'home') || comp.competitors.at(0);
-        const awayComp = comp.competitors.find(c => c.homeAway === 'away') || comp.competitors.at(1);
-        if (!homeComp || !awayComp) continue;
-
-        const homeName = (homeComp.team && (homeComp.team.shortDisplayName || homeComp.team.name)) || 'Home';
-        const awayName = (awayComp.team && (awayComp.team.shortDisplayName || awayComp.team.name)) || 'Away';
-        const homeFull = (homeComp.team && homeComp.team.displayName) || homeName;
-        const awayFull = (awayComp.team && awayComp.team.displayName) || awayName;
-
-        const bestFavScore = Math.min(getTeamPriority(homeFull), getTeamPriority(awayFull));
-        const state = ev.status && ev.status.type ? ev.status.type.state : 'pre';
-        const statusDetail = ev.status && ev.status.type ? ev.status.type.shortDetail : '';
-
-        const awayRec = (awayComp.records && awayComp.records.at(0)) ? awayComp.records.at(0).summary : '';
-        const homeRec = (homeComp.records && homeComp.records.at(0)) ? homeComp.records.at(0).summary : '';
-
-        const gameObj = {
-          league: lg.id,
-          leagueTier: lg.tier,
-          favScore: bestFavScore,
-          isLive: state === 'in',
-          isFinal: state === 'post',
-          status: statusDetail,
-          away: {
-            name: awayName,
-            score: state === 'pre' ? '' : (awayComp.score || '0'),
-            logo: (awayComp.team && awayComp.team.logo) || '',
-            record: awayRec
-          },
-          home: {
-            name: homeName,
-            score: state === 'pre' ? '' : (homeComp.score || '0'),
-            logo: (homeComp.team && homeComp.team.logo) || '',
-            record: homeRec
-          }
-        };
-
-        fetchedGames.push(gameObj);
-
-        const scoreSummary = state === 'pre'
-          ? (awayName + ' vs ' + homeName + ' (' + statusDetail + ')')
-          : (awayName + ' ' + gameObj.away.score + ' - ' + homeName + ' ' + gameObj.home.score + ' (' + statusDetail + ')');
-        wireHeadlines.push(lg.id + ': ' + scoreSummary);
-      }
-    });
-
-    const newsTasks = LEAGUES.slice(0, 5).map(async (lg) => {
       try {
-        const r2j = new URL('https://rss2json.com');
-        r2j.pathname = Array.of('v1', 'api.json').join('/');
-        r2j.searchParams.set('rss_url', lg.rss);
-        const res = await fetch(r2j.toString());
+        const directUrl = buildDirectEspnUrl(lg.sport, lg.slug);
+        const res = await fetch(directUrl);
         if (!res.ok) return;
         const data = await res.json();
-        if (data && data.items) {
-          for (const item of data.items.slice(0, 2)) {
-            wireHeadlines.push(lg.id + ' NEWS: ' + item.title);
+        if (!data || !data.events) return;
+
+        for (const ev of data.events) {
+          const comp = ev.competitions && ev.competitions.at(0);
+          if (!comp || !comp.competitors) continue;
+
+          if (lg.id === 'UFC') {
+            if (comp.competitors.length >= 2) {
+              const c0 = comp.competitors.at(0);
+              const c1 = comp.competitors.at(1);
+              const f1 = c0.athlete ? c0.athlete.displayName : 'Fighter 1';
+              const f2 = c1.athlete ? c1.athlete.displayName : 'Fighter 2';
+              const status = ev.status && ev.status.type ? ev.status.type.shortDetail : 'Scheduled';
+              const state = ev.status && ev.status.type ? ev.status.type.state : 'pre';
+              fetchedGames.push({
+                league: 'UFC',
+                leagueTier: lg.tier,
+                favScore: 40,
+                isLive: state === 'in',
+                isFinal: state === 'post',
+                status: status,
+                away: { name: f1, score: c0.winner ? 'WIN' : '', logo: 'https://espncdn.com', record: '' },
+                home: { name: f2, score: c1.winner ? 'WIN' : '', logo: 'https://espncdn.com', record: '' }
+              });
+            }
+            continue;
           }
+
+          const homeComp = comp.competitors.find(c => c.homeAway === 'home') || comp.competitors.at(0);
+          const awayComp = comp.competitors.find(c => c.homeAway === 'away') || comp.competitors.at(1);
+          if (!homeComp || !awayComp) continue;
+
+          const homeName = (homeComp.team && (homeComp.team.shortDisplayName || homeComp.team.name)) || 'Home';
+          const awayName = (awayComp.team && (awayComp.team.shortDisplayName || awayComp.team.name)) || 'Away';
+          const homeFull = (homeComp.team && homeComp.team.displayName) || homeName;
+          const awayFull = (awayComp.team && awayComp.team.displayName) || awayName;
+
+          const bestFavScore = Math.min(getTeamPriority(homeFull), getTeamPriority(awayFull));
+          const state = ev.status && ev.status.type ? ev.status.type.state : 'pre';
+          const statusDetail = ev.status && ev.status.type ? ev.status.type.shortDetail : '';
+
+          const awayRec = (awayComp.records && awayComp.records.at(0)) ? awayComp.records.at(0).summary : '';
+          const homeRec = (homeComp.records && homeComp.records.at(0)) ? homeComp.records.at(0).summary : '';
+
+          const gameObj = {
+            league: lg.id,
+            leagueTier: lg.tier,
+            favScore: bestFavScore,
+            isLive: state === 'in',
+            isFinal: state === 'post',
+            status: statusDetail,
+            away: {
+              name: awayName,
+              score: state === 'pre' ? '' : (awayComp.score || '0'),
+              logo: (awayComp.team && awayComp.team.logo) || '',
+              record: awayRec
+            },
+            home: {
+              name: homeName,
+              score: state === 'pre' ? '' : (homeComp.score || '0'),
+              logo: (homeComp.team && homeComp.team.logo) || '',
+              record: homeRec
+            }
+          };
+
+          fetchedGames.push(gameObj);
+
+          const scoreSummary = state === 'pre'
+            ? (awayName + ' vs ' + homeName + ' (' + statusDetail + ')')
+            : (awayName + ' ' + gameObj.away.score + ' - ' + homeName + ' ' + gameObj.home.score + ' (' + statusDetail + ')');
+          wireHeadlines.push(lg.id + ': ' + scoreSummary);
         }
       } catch (e) {
-        // Ignore
+        console.log('Feed skipped:', lg.id);
       }
     });
 
     await Promise.all(leagueTasks);
-    await Promise.all(newsTasks);
 
     fetchedGames.sort((a, b) => {
       if (a.favScore !== b.favScore) return a.favScore - b.favScore;
