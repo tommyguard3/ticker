@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:,">
 <title>Cinéma La France — Concessions & Feature</title>
 <style>
   :root {
@@ -28,7 +29,7 @@
   .screen {
     position: absolute;
     inset: 0;
-    padding: 36px 48px;
+    padding: 34px 48px;
     display: flex;
     flex-direction: column;
     opacity: 0;
@@ -47,8 +48,8 @@
     justify-content: space-between;
     align-items: center;
     border-bottom: 2px solid var(--panel-border);
-    padding-bottom: 18px;
-    margin-bottom: 28px;
+    padding-bottom: 16px;
+    margin-bottom: 24px;
   }
   .brand-wrap {
     display: flex;
@@ -100,15 +101,18 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 26px;
     flex: 1;
+    min-height: 0;
   }
   .category-col {
     background: var(--panel-bg);
     border: 2px solid var(--panel-border);
     border-radius: 16px;
-    padding: 24px 26px;
+    padding: 22px 24px;
     display: flex;
     flex-direction: column;
+    justify-content: space-between;
     box-shadow: 0 14px 32px rgba(0, 0, 0, 0.65);
+    min-height: 0;
   }
   .cat-header {
     font-size: 1.35rem;
@@ -118,19 +122,25 @@
     color: var(--gold);
     border-bottom: 2px solid var(--accent-purple);
     padding-bottom: 10px;
-    margin-bottom: 20px;
+    margin-bottom: 14px;
+  }
+  .items-list {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    flex: 1;
   }
   .menu-item {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    padding: 15px 0;
+    padding: 12px 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.14);
   }
   .menu-item:last-child { border-bottom: none; }
   .item-info { padding-right: 12px; }
   .item-name {
-    font-size: 1.45rem;
+    font-size: 1.5rem;
     font-weight: 700;
     color: #ffffff;
     margin-bottom: 4px;
@@ -140,7 +150,7 @@
     color: var(--text-muted);
   }
   .item-price {
-    font-size: 1.45rem;
+    font-size: 1.5rem;
     font-weight: 800;
     color: var(--gold);
     white-space: nowrap;
@@ -153,6 +163,14 @@
     color: var(--crimson);
     font-size: 1.1rem;
     text-transform: uppercase;
+  }
+  .cat-footer-img {
+    width: 100%;
+    height: 175px;
+    object-fit: cover;
+    border-radius: 12px;
+    margin-top: 16px;
+    border: 1px solid var(--panel-border);
   }
   .feature-wrap {
     flex: 1;
@@ -350,6 +368,7 @@ const FEATURE_SECONDS = 20;
 const CONCESSIONS_MENU = [
   {
     category: "Hot & Savory",
+    image: "https://unsplash.com",
     items: [
       { name: "Fresh Buttered Popcorn", desc: "Popped fresh • Reg $1.50 / Lrg $2.25", price: "$1.50+", soldOut: false },
       { name: "Nachos with Cheese & Salsa", desc: "Warm cheddar sauce & zesty salsa", price: "$2.00", soldOut: false },
@@ -358,6 +377,7 @@ const CONCESSIONS_MENU = [
   },
   {
     category: "Theatre Candy",
+    image: "https://unsplash.com",
     items: [
       { name: "Twizzlers", desc: "Classic strawberry twists", price: "$1.00", soldOut: false },
       { name: "Sour Patch Kids", desc: "Sour then sweet chewy candy", price: "$1.25", soldOut: false },
@@ -366,6 +386,7 @@ const CONCESSIONS_MENU = [
   },
   {
     category: "Ice Cold Drinks",
+    image: "https://unsplash.com",
     items: [
       { name: "Ice Cold Soda", desc: "Cola, Root Beer, Sprite & Orange", price: "$1.25", soldOut: false },
       { name: "Combo Special", desc: "Large Popcorn + Any 2 Drinks", price: "$4.25", soldOut: false }
@@ -385,8 +406,11 @@ function renderMenu() {
         '<div class="item-price">' + (item.soldOut ? 'Sold Out' : item.price) + '</div>' +
       '</div>'
     ).join("");
+    const imgHtml = col.image ? '<img class="cat-footer-img" src="' + col.image + '" alt="' + col.category + '">' : '';
     return '<div class="category-col">' +
-      '<div class="cat-header">' + col.category + '</div>' + itemsHtml +
+      '<div><div class="cat-header">' + col.category + '</div></div>' +
+      '<div class="items-list">' + itemsHtml + '</div>' +
+      imgHtml +
     '</div>';
   }).join("");
 }
@@ -437,9 +461,18 @@ function applyMovieData(data) {
 }
 
 async function queryMovieDatabase(query) {
-  const searchTerm = encodeURIComponent(query + " film");
-  const url = "https://wikipedia.org" + searchTerm + "&gsrlimit=8&prop=pageimages|description&piprop=original|thumbnail&pithumbsize=800";
-  const res = await fetch(url, {
+  const endpoint = new URL("https://wikipedia.org");
+  endpoint.searchParams.set("action", "query");
+  endpoint.searchParams.set("format", "json");
+  endpoint.searchParams.set("origin", "*");
+  endpoint.searchParams.set("generator", "search");
+  endpoint.searchParams.set("gsrsearch", query + " film");
+  endpoint.searchParams.set("gsrlimit", "8");
+  endpoint.searchParams.set("prop", "pageimages|description");
+  endpoint.searchParams.set("piprop", "original|thumbnail");
+  endpoint.searchParams.set("pithumbsize", "800");
+
+  const res = await fetch(endpoint.toString(), {
     headers: { "Api-User-Agent": "CinemaLaFranceKiosk/1.0 (https://github.io)" }
   });
   if (!res.ok) throw new Error("Search HTTP " + res.status);
@@ -461,7 +494,7 @@ async function queryMovieDatabase(query) {
       title: cleanTitle,
       poster: imgUrl,
       rating: "FEATURE",
-      year: yearMatch ? yearMatch[0] : "Cinema",
+      year: yearMatch ? yearMatch : "Cinema",
       runtime: desc ? desc.charAt(0).toUpperCase() + desc.slice(1) : "Tonight's Presentation"
     };
   });
@@ -535,4 +568,3 @@ if (cached) {
 </script>
 </body>
 </html>
-
