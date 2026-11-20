@@ -438,17 +438,19 @@ function applyMovieData(data) {
 
 async function queryMovieDatabase(query) {
   const searchTerm = encodeURIComponent(query + " film");
-  const url = "https://wikipedia.org" + searchTerm + "&gsrlimit=6&prop=pageimages|description&piprop=original|thumbnail&pithumbsize=800";
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("Search failed");
+  const url = "https://wikipedia.org" + searchTerm + "&gsrlimit=8&prop=pageimages|description&piprop=original|thumbnail&pithumbsize=800";
+  const res = await fetch(url, {
+    headers: { "Api-User-Agent": "CinemaLaFranceKiosk/1.0 (https://github.io)" }
+  });
+  if (!res.ok) throw new Error("Search HTTP " + res.status);
   const data = await res.json();
-  if (!data.query || !data.query.pages) throw new Error("No movies found");
+  if (!data.query || !data.query.pages) throw new Error("No pages");
 
   const pages = Object.values(data.query.pages)
     .sort((a, b) => a.index - b.index)
     .filter(p => p.original || p.thumbnail);
 
-  if (pages.length === 0) throw new Error("No posters found");
+  if (pages.length === 0) throw new Error("No posters");
 
   return pages.slice(0, 4).map(p => {
     const desc = p.description || "";
@@ -459,7 +461,7 @@ async function queryMovieDatabase(query) {
       title: cleanTitle,
       poster: imgUrl,
       rating: "FEATURE",
-      year: yearMatch ? yearMatch[1] : "Cinema",
+      year: yearMatch ? yearMatch[0] : "Cinema",
       runtime: desc ? desc.charAt(0).toUpperCase() + desc.slice(1) : "Tonight's Presentation"
     };
   });
@@ -503,7 +505,8 @@ async function searchMovie() {
       resultsBox.appendChild(btn);
     });
   } catch (e) {
-    status.textContent = "No matches found — check spelling and try again.";
+    console.error("Movie search error:", e);
+    status.textContent = "Error: " + e.message;
   }
 }
 
@@ -532,3 +535,4 @@ if (cached) {
 </script>
 </body>
 </html>
+
