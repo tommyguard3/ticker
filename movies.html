@@ -172,22 +172,23 @@
     font-size: 1.05rem;
     text-transform: uppercase;
   }
-  .cat-footer-art {
+   .cat-footer-art {
     width: 100%;
-    flex: 1;
-    min-height: 200px;
-    max-height: 300px;
+    aspect-ratio: 16 / 10;
+    max-height: 290px;
     border-radius: 12px;
     margin-top: auto;
     padding-top: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     overflow: hidden;
   }
   .cat-footer-art img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     border-radius: 12px;
-    border: 1px solid var(--panel-border);
   }
   .feature-wrap {
     flex: 1;
