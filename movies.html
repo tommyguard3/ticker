@@ -370,7 +370,8 @@ const FEATURE_SECONDS = 20;
 const CONCESSIONS_MENU = [
   {
     category: "Hot & Savory",
-    photo: "https://wikimedia.org",
+    wikiFile: "File:Popcorn_Time_in_black_background.jpg",
+    fallbackUrl: "https://wikimedia.org",
     items: [
       { name: "Fresh Buttered Popcorn", desc: "Popped fresh • Reg $1.50 / Lrg $2.25", price: "$1.50+", soldOut: false },
       { name: "Nachos with Cheese & Salsa", desc: "Warm cheddar sauce & zesty salsa", price: "$2.00", soldOut: false },
@@ -379,7 +380,8 @@ const CONCESSIONS_MENU = [
   },
   {
     category: "Theatre Candy",
-    photo: "https://wikimedia.org",
+    wikiFile: "File:Candy_in_Damascus.jpg",
+    fallbackUrl: "https://wikimedia.org",
     items: [
       { name: "Twizzlers", desc: "Classic strawberry twists", price: "$1.00", soldOut: false },
       { name: "Sour Patch Kids", desc: "Sour then sweet chewy candy", price: "$1.25", soldOut: false },
@@ -388,16 +390,18 @@ const CONCESSIONS_MENU = [
   },
   {
     category: "Ice Cold Drinks",
-    photo: "https://wikimedia.org",
+    wikiFile: "File:Tumbler_of_cola_with_ice.jpg",
+    fallbackUrl: "https://wikimedia.org",
     items: [
       { name: "Ice Cold Soda", desc: "Cola, Root Beer, Sprite & Orange", price: "$1.25", soldOut: false },
       { name: "Combo Special", desc: "Large Popcorn + Any 2 Drinks", price: "$4.25", soldOut: false }
     ]
   }
 ];
+
 function renderMenu() {
   const container = document.getElementById("menu-container");
-  container.innerHTML = CONCESSIONS_MENU.map(col => {
+  container.innerHTML = CONCESSIONS_MENU.map((col, idx) => {
     const itemsHtml = col.items.map(item =>
       '<div class="menu-item ' + (item.soldOut ? 'sold-out' : '') + '">' +
         '<div class="item-info">' +
@@ -407,17 +411,42 @@ function renderMenu() {
         '<div class="item-price">' + (item.soldOut ? 'Sold Out' : item.price) + '</div>' +
       '</div>'
     ).join("");
-    const imgHtml = col.photo
-      ? '<div class="cat-footer-art"><img src="' + col.photo + '" alt="' + col.category + '" style="width:100%;height:100%;object-fit:cover;"></div>'
-      : '';
+    const imgHtml = '<div class="cat-footer-art"><img id="cat-img-' + idx + '" src="' + col.fallbackUrl + '" alt="' + col.category + '" style="width:100%;height:100%;object-fit:cover;"></div>';
     return '<div class="category-col">' +
       '<div><div class="cat-header">' + col.category + '</div></div>' +
       '<div class="items-list">' + itemsHtml + '</div>' +
       imgHtml +
     '</div>';
   }).join("");
+  optimizeCategoryPhotos();
 }
 
+async function optimizeCategoryPhotos() {
+  const host = ["commons", "wikimedia", "org"].join(".");
+  const path = ["", "w", "api.php"].join("/");
+  for (let i = 0; i < CONCESSIONS_MENU.length; i++) {
+    try {
+      const col = CONCESSIONS_MENU.at(i);
+      const endpoint = new URL("https://" + host + path);
+      endpoint.searchParams.set("action", "query");
+      endpoint.searchParams.set("format", "json");
+      endpoint.searchParams.set("origin", "*");
+      endpoint.searchParams.set("titles", col.wikiFile);
+      endpoint.searchParams.set("prop", "imageinfo");
+      endpoint.searchParams.set("iiprop", "url");
+      endpoint.searchParams.set("iiurlwidth", "800");
+      const res = await fetch(endpoint.toString());
+      const json = await res.json();
+      const pages = json.query && json.query.pages ? Object.values(json.query.pages) : [];
+      const firstPage = pages.at(0);
+      const info = firstPage && firstPage.imageinfo ? firstPage.imageinfo.at(0) : null;
+      if (info && info.thumburl) {
+        const imgEl = document.getElementById("cat-img-" + i);
+        if (imgEl) imgEl.src = info.thumburl;
+      }
+    } catch (e) {}
+  }
+}
 function updateClocks() {
   const now = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   document.getElementById("clock-menu").textContent = now;
@@ -463,30 +492,51 @@ function applyMovieData(data) {
   document.getElementById("movie-runtime").textContent = data.runtime || "Cinéma La France";
 }
 
-async function queryMovieDatabase(query) {
-  const host = ["itunes", "apple", "com"].join(".");
-  const endpoint = new URL("https://" + host + "/search");
-  endpoint.searchParams.set("term", query);
-  endpoint.searchParams.set("media", "movie");
-  endpoint.searchParams.set("entity", "movie");
-  endpoint.searchParams.set("limit", "5");
+function searchItunesJSONP(query) {
+  return new Promise((resolve, reject) => {
+    const cbName = "cbMovie_" + Date.now();
+    const script = document.createElement("script");
+    const host = ["itunes", "apple", "com"].join(".");
+    const endpoint = new URL("https://" + host + "/search");
+    endpoint.searchParams.set("term", query);
+    endpoint.searchParams.set("media", "movie");
+    endpoint.searchParams.set("limit", "6");
+    endpoint.searchParams.set("callback", cbName);
 
-  const res = await fetch(endpoint.toString());
-  if (!res.ok) throw new Error("Search HTTP " + res.status);
-  const data = await res.json();
-  const movies = (data.results || []).filter(m => m.artworkUrl100 && m.trackName);
-  if (movies.length === 0) throw new Error("No movies found");
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error("Search timed out"));
+    }, 6000);
 
-  return movies.slice(0, 4).map(m => {
-    const mins = m.trackTimeMillis ? Math.round(m.trackTimeMillis / 60000) : 0;
-    const runtimeStr = mins ? Math.floor(mins / 60) + "h " + (mins % 60) + "m" : "Feature Presentation";
-    return {
-      title: m.trackName,
-      poster: m.artworkUrl100.replace("100x100bb", "900x900bb"),
-      rating: m.contentAdvisoryRating || "PG",
-      year: m.releaseDate ? m.releaseDate.slice(0, 4) : "",
-      runtime: runtimeStr
+    function cleanup() {
+      clearTimeout(timer);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    window[cbName] = (data) => {
+      cleanup();
+      const list = (data && data.results ? data.results : []).filter(m => m.artworkUrl100 && m.trackName);
+      if (list.length === 0) {
+        reject(new Error("No matches found"));
+        return;
+      }
+      resolve(list.slice(0, 4).map(m => {
+        const mins = m.trackTimeMillis ? Math.round(m.trackTimeMillis / 60000) : 0;
+        const runtimeStr = mins ? Math.floor(mins / 60) + "h " + (mins % 60) + "m" : "Feature Presentation";
+        return {
+          title: m.trackName,
+          poster: m.artworkUrl100.replace("100x100bb", "900x900bb"),
+          rating: m.contentAdvisoryRating || "PG",
+          year: m.releaseDate ? m.releaseDate.slice(0, 4) : "",
+          runtime: runtimeStr
+        };
+      }));
     };
+
+    script.src = endpoint.toString();
+    script.onerror = () => { cleanup(); reject(new Error("Network error")); };
+    document.body.appendChild(script);
   });
 }
 
@@ -517,7 +567,7 @@ async function searchMovie() {
   resultsBox.innerHTML = "";
   status.textContent = "Searching movies...";
   try {
-    const matches = await queryMovieDatabase(query);
+    const matches = await searchItunesJSONP(query);
     status.textContent = "Select a movie:";
     matches.forEach(movie => {
       const btn = document.createElement("button");
@@ -529,7 +579,7 @@ async function searchMovie() {
     });
   } catch (e) {
     console.error("Movie search error:", e);
-    status.textContent = "No movies found — try another title.";
+    status.textContent = "No movies found — check spelling and try again.";
   }
 }
 
@@ -553,11 +603,10 @@ const cached = localStorage.getItem("savedMovieData");
 if (cached) {
   applyMovieData(JSON.parse(cached));
 } else {
-  queryMovieDatabase(DEFAULT_SEARCH)
-    .then(matches => selectMovie(matches))
+  searchItunesJSONP(DEFAULT_SEARCH)
+    .then(matches => selectMovie(matches.at(0)))
     .catch(() => {});
 }
 </script>
 </body>
 </html>
-
