@@ -548,7 +548,7 @@
       const pubTime = new Date(art.published).getTime();
       if (!isNaN(pubTime)) {
         const ageHours = (Date.now() - pubTime) / (1000 * 60 * 60);
-        if (ageHours > 36 || ageHours < -2) return false;
+        if (ageHours > 24 || ageHours < -2) return false;
       }
     }
     return true;
