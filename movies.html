@@ -367,16 +367,10 @@ const DEFAULT_SEARCH = "The Princess Bride";
 const MENU_SECONDS = 45;
 const FEATURE_SECONDS = 20;
 
-const CARD_ART = {
-  savory: '<svg viewBox="0 0 400 150" xmlns="http://w3.org"><rect width="400" height="150" fill="#1b0f33"/><circle cx="175" cy="46" r="14" fill="#fde047"/><circle cx="195" cy="40" r="16" fill="#fef08a"/><circle cx="215" cy="45" r="14" fill="#facc15"/><circle cx="230" cy="52" r="12" fill="#fef08a"/><circle cx="165" cy="54" r="12" fill="#facc15"/><polygon points="160,55 240,55 228,132 172,132" fill="#e11d48"/><polygon points="176,55 190,55 186,132 178,132" fill="#ffffff"/><polygon points="208,55 222,55 218,132 210,132" fill="#ffffff"/><rect x="172" y="80" width="56" height="22" rx="4" fill="#f5b942"/><text x="200" y="95" font-family="sans-serif" font-size="11" font-weight="800" fill="#180c2e" text-anchor="middle">POPCORN</text></svg>',
-  candy: '<svg viewBox="0 0 400 150" xmlns="http://w3.org"><rect width="400" height="150" fill="#1b0f33"/><rect x="115" y="42" width="76" height="68" rx="10" transform="rotate(-8 153 76)" fill="#e11d48" stroke="#f5b942" stroke-width="2"/><text x="153" y="81" transform="rotate(-8 153 76)" font-family="sans-serif" font-size="12" font-weight="800" fill="#ffffff" text-anchor="middle">TWISTS</text><rect x="205" y="40" width="80" height="70" rx="10" transform="rotate(7 245 75)" fill="#7c3aed" stroke="#f5b942" stroke-width="2"/><text x="245" y="80" transform="rotate(7 245 75)" font-family="sans-serif" font-size="12" font-weight="800" fill="#f5b942" text-anchor="middle">SWEETS</text><circle cx="195" cy="112" r="10" fill="#22c55e"/><circle cx="215" cy="116" r="10" fill="#f5b942"/><circle cx="176" cy="116" r="9" fill="#ec4899"/></svg>',
-  drinks: '<svg viewBox="0 0 400 150" xmlns="http://w3.org"><rect width="400" height="150" fill="#1b0f33"/><line x1="212" y1="18" x2="198" y2="52" stroke="#f5b942" stroke-width="5" stroke-linecap="round"/><ellipse cx="196" cy="52" rx="34" ry="7" fill="#e2e8f0"/><polygon points="164,54 228,54 218,132 174,132" fill="#4f46e5" stroke="#f5b942" stroke-width="2"/><polygon points="168,76 224,76 220,108 172,108" fill="#f5b942"/><text x="196" y="96" font-family="sans-serif" font-size="12" font-weight="800" fill="#180c2e" text-anchor="middle">ICE COLD</text><circle cx="250" cy="48" r="5" fill="#c084fc" opacity="0.7"/><circle cx="262" cy="68" r="4" fill="#f5b942" opacity="0.7"/><circle cx="144" cy="64" r="5" fill="#c084fc" opacity="0.7"/></svg>'
-};
-
 const CONCESSIONS_MENU = [
   {
     category: "Hot & Savory",
-    artKey: "savory",
+    photo: "https://wikimedia.org",
     items: [
       { name: "Fresh Buttered Popcorn", desc: "Popped fresh • Reg $1.50 / Lrg $2.25", price: "$1.50+", soldOut: false },
       { name: "Nachos with Cheese & Salsa", desc: "Warm cheddar sauce & zesty salsa", price: "$2.00", soldOut: false },
@@ -385,7 +379,7 @@ const CONCESSIONS_MENU = [
   },
   {
     category: "Theatre Candy",
-    artKey: "candy",
+    photo: "https://wikimedia.org",
     items: [
       { name: "Twizzlers", desc: "Classic strawberry twists", price: "$1.00", soldOut: false },
       { name: "Sour Patch Kids", desc: "Sour then sweet chewy candy", price: "$1.25", soldOut: false },
@@ -394,7 +388,7 @@ const CONCESSIONS_MENU = [
   },
   {
     category: "Ice Cold Drinks",
-    artKey: "drinks",
+    photo: "https://wikimedia.org",
     items: [
       { name: "Ice Cold Soda", desc: "Cola, Root Beer, Sprite & Orange", price: "$1.25", soldOut: false },
       { name: "Combo Special", desc: "Large Popcorn + Any 2 Drinks", price: "$4.25", soldOut: false }
@@ -413,11 +407,13 @@ function renderMenu() {
         '<div class="item-price">' + (item.soldOut ? 'Sold Out' : item.price) + '</div>' +
       '</div>'
     ).join("");
-    const artHtml = col.artKey ? '<div class="cat-footer-art">' + CARD_ART[col.artKey] + '</div>' : '';
+    const imgHtml = col.photo
+      ? '<div class="cat-footer-art"><img src="' + col.photo + '" alt="' + col.category + '" style="width:100%;height:100%;object-fit:cover;"></div>'
+      : '';
     return '<div class="category-col">' +
       '<div><div class="cat-header">' + col.category + '</div></div>' +
       '<div class="items-list">' + itemsHtml + '</div>' +
-      artHtml +
+      imgHtml +
     '</div>';
   }).join("");
 }
@@ -468,41 +464,28 @@ function applyMovieData(data) {
 }
 
 async function queryMovieDatabase(query) {
-  const host = ["en", "wikipedia", "org"].join(".");
-  const path = ["", "w", "api.php"].join("/");
-  const endpoint = new URL("https://" + host + path);
-  endpoint.searchParams.set("action", "query");
-  endpoint.searchParams.set("format", "json");
-  endpoint.searchParams.set("origin", "*");
-  endpoint.searchParams.set("generator", "search");
-  endpoint.searchParams.set("gsrsearch", query + " film");
-  endpoint.searchParams.set("gsrlimit", "8");
-  endpoint.searchParams.set("prop", "pageimages|description");
-  endpoint.searchParams.set("piprop", "original|thumbnail");
-  endpoint.searchParams.set("pithumbsize", "800");
+  const host = ["itunes", "apple", "com"].join(".");
+  const endpoint = new URL("https://" + host + "/search");
+  endpoint.searchParams.set("term", query);
+  endpoint.searchParams.set("media", "movie");
+  endpoint.searchParams.set("entity", "movie");
+  endpoint.searchParams.set("limit", "5");
 
   const res = await fetch(endpoint.toString());
   if (!res.ok) throw new Error("Search HTTP " + res.status);
   const data = await res.json();
-  if (!data.query || !data.query.pages) throw new Error("No matches found");
+  const movies = (data.results || []).filter(m => m.artworkUrl100 && m.trackName);
+  if (movies.length === 0) throw new Error("No movies found");
 
-  const pages = Object.values(data.query.pages)
-    .sort((a, b) => a.index - b.index)
-    .filter(p => p.original || p.thumbnail);
-
-  if (pages.length === 0) throw new Error("No posters found");
-
-  return pages.slice(0, 4).map(p => {
-    const desc = p.description || "";
-    const yearMatch = desc.match(/\b(19\d\d|20\d\d)\b/);
-    const cleanTitle = p.title.replace(/\s*\(.*?film\)/i, "").trim();
-    const imgUrl = (p.original && p.original.source) ? p.original.source : p.thumbnail.source;
+  return movies.slice(0, 4).map(m => {
+    const mins = m.trackTimeMillis ? Math.round(m.trackTimeMillis / 60000) : 0;
+    const runtimeStr = mins ? Math.floor(mins / 60) + "h " + (mins % 60) + "m" : "Feature Presentation";
     return {
-      title: cleanTitle,
-      poster: imgUrl,
-      rating: "FEATURE",
-      year: yearMatch ? yearMatch : "Cinema",
-      runtime: desc ? desc.charAt(0).toUpperCase() + desc.slice(1) : "Tonight's Presentation"
+      title: m.trackName,
+      poster: m.artworkUrl100.replace("100x100bb", "900x900bb"),
+      rating: m.contentAdvisoryRating || "PG",
+      year: m.releaseDate ? m.releaseDate.slice(0, 4) : "",
+      runtime: runtimeStr
     };
   });
 }
@@ -532,7 +515,7 @@ async function searchMovie() {
   const status = document.getElementById("search-status");
   const resultsBox = document.getElementById("search-results");
   resultsBox.innerHTML = "";
-  status.textContent = "Searching...";
+  status.textContent = "Searching movies...";
   try {
     const matches = await queryMovieDatabase(query);
     status.textContent = "Select a movie:";
@@ -540,13 +523,13 @@ async function searchMovie() {
       const btn = document.createElement("button");
       btn.className = "btn btn-secondary";
       btn.style.textAlign = "left";
-      btn.textContent = movie.title + " (" + movie.year + ")";
+      btn.textContent = movie.title + " (" + movie.year + ") • " + movie.rating;
       btn.onclick = () => selectMovie(movie);
       resultsBox.appendChild(btn);
     });
   } catch (e) {
     console.error("Movie search error:", e);
-    status.textContent = "Error: " + e.message;
+    status.textContent = "No movies found — try another title.";
   }
 }
 
@@ -577,3 +560,4 @@ if (cached) {
 </script>
 </body>
 </html>
+
