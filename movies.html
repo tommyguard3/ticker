@@ -6,14 +6,14 @@
 <title>Cinéma La France — Concessions & Feature</title>
 <style>
   :root {
-    --bg-dark: #0b0714;
-    --panel-bg: #1c1530;
-    --panel-border: #483975;
+    --bg-dark: #180c2e;
+    --panel-bg: #29184a;
+    --panel-border: #6344a6;
     --gold: #f5b942;
     --crimson: #e11d48;
-    --accent-purple: #a855f7;
+    --accent-purple: #c084fc;
     --text-main: #ffffff;
-    --text-muted: #cbbfe6;
+    --text-muted: #dfd3f7;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -108,7 +108,7 @@
     padding: 24px 26px;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.8);
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.65);
   }
   .cat-header {
     font-size: 1.35rem;
@@ -125,7 +125,7 @@
     justify-content: space-between;
     align-items: flex-start;
     padding: 15px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
   }
   .menu-item:last-child { border-bottom: none; }
   .item-info { padding-right: 12px; }
@@ -163,8 +163,8 @@
     text-align: center;
   }
   .now-badge {
-    background: var(--accent-purple);
-    color: #fff;
+    background: var(--gold);
+    color: #180c2e;
     font-size: 1.15rem;
     font-weight: 800;
     letter-spacing: 4px;
@@ -181,7 +181,7 @@
     border: 3px solid var(--gold);
     background: var(--panel-bg);
     margin-bottom: 22px;
-    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.85);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.75);
   }
   .poster-frame img {
     width: 100%;
@@ -214,7 +214,7 @@
     left: 0;
     width: 100%;
     height: 5px;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.14);
   }
   .progress-fill {
     height: 100%;
@@ -226,7 +226,7 @@
   .modal-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(5, 3, 10, 0.88);
+    background: rgba(10, 4, 22, 0.88);
     display: none;
     align-items: center;
     justify-content: center;
@@ -275,8 +275,8 @@
     border-radius: 8px;
     cursor: pointer;
   }
-  .btn-primary { background: var(--gold); color: #000; }
-  .btn-secondary { background: #2d224d; color: #fff; border: 1px solid var(--panel-border); }
+  .btn-primary { background: var(--gold); color: #180c2e; }
+  .btn-secondary { background: #3b246b; color: #fff; border: 1px solid var(--panel-border); }
   .btn-secondary:hover, .btn-secondary:focus { border-color: var(--gold); outline: none; }
   .status-msg { margin-top: 12px; color: var(--gold); font-size: 1rem; }
 </style>
@@ -313,10 +313,10 @@
     <div class="poster-frame"><img id="poster-img" src="" alt="Movie Poster"></div>
     <div class="movie-title" id="movie-title">Loading Feature...</div>
     <div class="movie-meta">
-      <span class="rating-pill" id="movie-rating">PG</span>
+      <span class="rating-pill" id="movie-rating">FEATURE</span>
       <span id="movie-year">1987</span>
       <span>•</span>
-      <span id="movie-runtime">Tonight's Presentation</span>
+      <span id="movie-runtime">Cinéma La France</span>
     </div>
   </div>
 </div>
@@ -339,10 +339,10 @@
 <script>
 const DEFAULT_MOVIE = {
   title: "The Princess Bride",
-  poster: "https://media-amazon.com",
+  poster: "https://wikimedia.org",
   rating: "PG",
   year: "1987",
-  runtime: "Cary Elwes, Mandy Patinkin"
+  runtime: "Cinéma La France"
 };
 const MENU_SECONDS = 45;
 const FEATURE_SECONDS = 20;
@@ -432,26 +432,37 @@ function applyMovieData(data) {
   document.getElementById("poster-img").src = data.poster;
   document.getElementById("movie-title").textContent = data.title;
   document.getElementById("movie-rating").textContent = data.rating || "FEATURE";
-  document.getElementById("movie-year").textContent = data.year || "";
+  document.getElementById("movie-year").textContent = data.year || "Tonight's Show";
   document.getElementById("movie-runtime").textContent = data.runtime || "Cinéma La France";
 }
 
 async function queryMovieDatabase(query) {
-  const clean = query.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
-  const firstLetter = clean.charAt(0) || "a";
-  const url = "https://media-imdb.com" + firstLetter + "/" + encodeURIComponent(clean) + ".json";
+  const searchTerm = encodeURIComponent(query + " film");
+  const url = "https://wikipedia.org" + searchTerm + "&gsrlimit=6&prop=pageimages|description&piprop=original|thumbnail&pithumbsize=800";
   const res = await fetch(url);
   if (!res.ok) throw new Error("Search failed");
   const data = await res.json();
-  const movies = (data.d || []).filter(x => x.qid === "movie" && x.i && x.i.imageUrl);
-  if (movies.length === 0) throw new Error("No movies found");
-  return movies.slice(0, 4).map(m => ({
-    title: m.l,
-    poster: m.i.imageUrl.replace("._V1_.", "._V1_FMjpg_UX900_."),
-    rating: "FEATURE",
-    year: m.y ? String(m.y) : "",
-    runtime: m.s || "Tonight's Presentation"
-  }));
+  if (!data.query || !data.query.pages) throw new Error("No movies found");
+
+  const pages = Object.values(data.query.pages)
+    .sort((a, b) => a.index - b.index)
+    .filter(p => p.original || p.thumbnail);
+
+  if (pages.length === 0) throw new Error("No posters found");
+
+  return pages.slice(0, 4).map(p => {
+    const desc = p.description || "";
+    const yearMatch = desc.match(/\b(19\d\d|20\d\d)\b/);
+    const cleanTitle = p.title.replace(/\s*\(.*?film\)/i, "").trim();
+    const imgUrl = (p.original && p.original.source) ? p.original.source : p.thumbnail.source;
+    return {
+      title: cleanTitle,
+      poster: imgUrl,
+      rating: "FEATURE",
+      year: yearMatch ? yearMatch[1] : "Cinema",
+      runtime: desc ? desc.charAt(0).toUpperCase() + desc.slice(1) : "Tonight's Presentation"
+    };
+  });
 }
 
 function selectMovie(movieObj) {
