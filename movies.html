@@ -326,7 +326,13 @@
   </div>
 </div>
 <script>
-const DEFAULT_MOVIE = "The Princess Bride";
+const DEFAULT_MOVIE = {
+  title: "The Princess Bride",
+  poster: "https://media-amazon.com",
+  rating: "PG",
+  year: "1987",
+  runtime: "1h 38m"
+};
 const MENU_SECONDS = 45;
 const FEATURE_SECONDS = 20;
 
@@ -359,7 +365,7 @@ const CONCESSIONS_MENU = [
 function renderMenu() {
   const container = document.getElementById("menu-container");
   container.innerHTML = CONCESSIONS_MENU.map(col => `
-    <div class="category-col" style="box-shadow: 0 12px 28px rgba(0,0,0,0.7);">
+    <div class="category-col" style="box-shadow: 0 12px 28px rgba(0,0,0,0.75);">
       <div class="cat-header">${col.category}</div>
       ${col.items.map(item => `
         <div class="menu-item ${item.soldOut ? 'sold-out' : ''}">
@@ -414,50 +420,27 @@ function switchScreen() {
 function applyMovieData(data) {
   document.getElementById("poster-img").src = data.poster;
   document.getElementById("movie-title").textContent = data.title;
-  document.getElementById("movie-rating").textContent = data.rating || "PG";
+  document.getElementById("movie-rating").textContent = data.rating || "FEATURE";
   document.getElementById("movie-year").textContent = data.year || "";
-  document.getElementById("movie-runtime").textContent = data.runtime || "";
+  document.getElementById("movie-runtime").textContent = data.runtime || "Cinéma La France";
 }
 
-function queryItunesJSONP(title, limit = 4) {
-  return new Promise((resolve, reject) => {
-    const cbName = "itunesCb_" + Date.now();
-    const script = document.createElement("script");
-    const timer = setTimeout(() => {
-      cleanup();
-      reject(new Error("Timeout"));
-    }, 6000);
-
-    function cleanup() {
-      clearTimeout(timer);
-      delete window[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-    }
-
-    window[cbName] = (json) => {
-      cleanup();
-      if (!json || !json.results || json.results.length === 0) {
-        reject(new Error("No matches"));
-      } else {
-        resolve(json.results);
-      }
-    };
-
-    script.src = `https://apple.com{encodeURIComponent(title)}&country=CA&media=movie&entity=movie&limit=${limit}&callback=${cbName}`;
-    script.onerror = () => { cleanup(); reject(new Error("Network error")); };
-    document.body.appendChild(script);
-  });
-}
-
-function formatItunesMovie(m) {
-  const mins = m.trackTimeMillis ? Math.round(m.trackTimeMillis / 60000) : 0;
-  return {
-    title: m.trackName,
-    poster: m.artworkUrl100.replace("100x100bb", "900x900bb"),
-    rating: m.contentAdvisoryRating || "PG",
-    year: m.releaseDate ? m.releaseDate.slice(0, 4) : "",
-    runtime: mins ? `${Math.floor(mins / 60)}h ${mins % 60}m` : "Feature Film"
-  };
+async function queryMovieDatabase(query) {
+  const clean = query.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
+  const firstLetter = clean.charAt(0) || "a";
+  const url = `https://media-imdb.com{firstLetter}/${encodeURIComponent(clean)}.json`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Search failed");
+  const data = await res.json();
+  const movies = (data.d || []).filter(x => x.qid === "movie" && x.i && x.i.imageUrl);
+  if (movies.length === 0) throw new Error("No movies found");
+  return movies.slice(0, 4).map(m => ({
+    title: m.l,
+    poster: m.i.imageUrl.replace("._V1_.", "._V1_FMjpg_UX900_."),
+    rating: "FEATURE",
+    year: m.y ? String(m.y) : "",
+    runtime: m.s || "Tonight's Presentation"
+  }));
 }
 
 function selectMovie(movieObj) {
@@ -485,21 +468,20 @@ async function searchMovie() {
   const status = document.getElementById("search-status");
   const resultsBox = document.getElementById("search-results");
   resultsBox.innerHTML = "";
-  status.textContent = "Searching...";
+  status.textContent = "Searching IMDb...";
   try {
-    const rawResults = await queryItunesJSONP(query, 4);
+    const matches = await queryMovieDatabase(query);
     status.textContent = "Select a movie:";
-    rawResults.forEach(item => {
-      const formatted = formatItunesMovie(item);
+    matches.forEach(movie => {
       const btn = document.createElement("button");
       btn.className = "btn btn-secondary";
       btn.style.textAlign = "left";
-      btn.textContent = `${formatted.title} (${formatted.year}) • ${formatted.rating}`;
-      btn.onclick = () => selectMovie(formatted);
+      btn.textContent = `${movie.title} (${movie.year})`;
+      btn.onclick = () => selectMovie(movie);
       resultsBox.appendChild(btn);
     });
   } catch (e) {
-    status.textContent = "No matches found — check spelling and try again.";
+    status.textContent = "No matches found — try a shorter title.";
   }
 }
 
@@ -523,11 +505,8 @@ const cached = localStorage.getItem("savedMovieData");
 if (cached) {
   applyMovieData(JSON.parse(cached));
 } else {
-  queryItunesJSONP(DEFAULT_MOVIE, 1)
-    .then(res => selectMovie(formatItunesMovie(res[0])))
-    .catch(() => {});
+  applyMovieData(DEFAULT_MOVIE);
 }
 </script>
 </body>
 </html>
-
