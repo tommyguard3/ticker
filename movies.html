@@ -5,14 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cinéma La France — Concessions & Feature</title>
 <style>
-    :root {
-    --bg-dark: #050608;
-    --panel-bg: #1b2232;
-    --panel-border: #38445e;
+  :root {
+    --bg-dark: #0b0714;
+    --panel-bg: #1c1530;
+    --panel-border: #483975;
     --gold: #f5b942;
-    --crimson: #e52538;
+    --crimson: #e11d48;
+    --accent-purple: #a855f7;
     --text-main: #ffffff;
-    --text-muted: #b8c4d9;
+    --text-muted: #cbbfe6;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -55,7 +56,7 @@
     gap: 16px;
   }
   .brand-title {
-    font-size: 2.3rem;
+    font-size: 2.35rem;
     font-weight: 800;
     letter-spacing: 3px;
     text-transform: uppercase;
@@ -67,7 +68,7 @@
     font-weight: 700;
     letter-spacing: 2.5px;
     text-transform: uppercase;
-    color: var(--text-muted);
+    color: var(--accent-purple);
   }
   .header-right {
     display: flex;
@@ -97,16 +98,17 @@
   .menu-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 24px;
+    gap: 26px;
     flex: 1;
   }
   .category-col {
     background: var(--panel-bg);
-    border: 1px solid var(--panel-border);
+    border: 2px solid var(--panel-border);
     border-radius: 16px;
     padding: 24px 26px;
     display: flex;
     flex-direction: column;
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.8);
   }
   .cat-header {
     font-size: 1.35rem;
@@ -114,7 +116,7 @@
     text-transform: uppercase;
     letter-spacing: 2px;
     color: var(--gold);
-    border-bottom: 2px solid var(--crimson);
+    border-bottom: 2px solid var(--accent-purple);
     padding-bottom: 10px;
     margin-bottom: 20px;
   }
@@ -122,14 +124,15 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    padding: 14px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
+    padding: 15px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   }
   .menu-item:last-child { border-bottom: none; }
   .item-info { padding-right: 12px; }
   .item-name {
     font-size: 1.45rem;
     font-weight: 700;
+    color: #ffffff;
     margin-bottom: 4px;
   }
   .item-desc {
@@ -160,7 +163,7 @@
     text-align: center;
   }
   .now-badge {
-    background: var(--crimson);
+    background: var(--accent-purple);
     color: #fff;
     font-size: 1.15rem;
     font-weight: 800;
@@ -176,8 +179,9 @@
     border-radius: 14px;
     overflow: hidden;
     border: 3px solid var(--gold);
-    background: #181d2b;
+    background: var(--panel-bg);
     margin-bottom: 22px;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.85);
   }
   .poster-frame img {
     width: 100%;
@@ -210,7 +214,7 @@
     left: 0;
     width: 100%;
     height: 5px;
-    background: rgba(255,255,255,0.08);
+    background: rgba(255, 255, 255, 0.1);
   }
   .progress-fill {
     height: 100%;
@@ -222,7 +226,7 @@
   .modal-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.85);
+    background: rgba(5, 3, 10, 0.88);
     display: none;
     align-items: center;
     justify-content: center;
@@ -234,7 +238,7 @@
     border: 2px solid var(--gold);
     border-radius: 16px;
     padding: 32px;
-    width: 520px;
+    width: 540px;
     max-width: 90vw;
   }
   .modal-box h2 {
@@ -250,6 +254,12 @@
     border: 1px solid var(--panel-border);
     background: var(--bg-dark);
     color: #fff;
+    margin-bottom: 14px;
+  }
+  .results-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     margin-bottom: 16px;
   }
   .modal-actions {
@@ -266,7 +276,8 @@
     cursor: pointer;
   }
   .btn-primary { background: var(--gold); color: #000; }
-  .btn-secondary { background: #262f42; color: #fff; }
+  .btn-secondary { background: #2d224d; color: #fff; border: 1px solid var(--panel-border); }
+  .btn-secondary:hover, .btn-secondary:focus { border-color: var(--gold); outline: none; }
   .status-msg { margin-top: 12px; color: var(--gold); font-size: 1rem; }
 </style>
 </head>
@@ -303,9 +314,9 @@
     <div class="movie-title" id="movie-title">Loading Feature...</div>
     <div class="movie-meta">
       <span class="rating-pill" id="movie-rating">PG</span>
-      <span id="movie-year">1985</span>
+      <span id="movie-year">1987</span>
       <span>•</span>
-      <span id="movie-runtime">1h 56m</span>
+      <span id="movie-runtime">Tonight's Presentation</span>
     </div>
   </div>
 </div>
@@ -315,8 +326,8 @@
 <div class="modal-backdrop" id="movie-modal">
   <div class="modal-box">
     <h2>Set Tonight's Movie</h2>
-    <input type="text" id="movie-search-input" class="modal-input" placeholder="e.g. The Princess Bride or Home Alone">
-    <div id="search-results" style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;"></div>
+    <input type="text" id="movie-search-input" class="modal-input" placeholder="e.g. Home Alone or Princess Bride">
+    <div class="results-list" id="search-results"></div>
     <div class="modal-actions">
       <button class="btn btn-secondary" onclick="switchScreen()">Flip Screen</button>
       <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
@@ -331,7 +342,7 @@ const DEFAULT_MOVIE = {
   poster: "https://media-amazon.com",
   rating: "PG",
   year: "1987",
-  runtime: "1h 38m"
+  runtime: "Cary Elwes, Mandy Patinkin"
 };
 const MENU_SECONDS = 45;
 const FEATURE_SECONDS = 20;
@@ -364,20 +375,20 @@ const CONCESSIONS_MENU = [
 
 function renderMenu() {
   const container = document.getElementById("menu-container");
-  container.innerHTML = CONCESSIONS_MENU.map(col => `
-    <div class="category-col" style="box-shadow: 0 12px 28px rgba(0,0,0,0.75);">
-      <div class="cat-header">${col.category}</div>
-      ${col.items.map(item => `
-        <div class="menu-item ${item.soldOut ? 'sold-out' : ''}">
-          <div class="item-info">
-            <div class="item-name">${item.name}</div>
-            <div class="item-desc">${item.desc}</div>
-          </div>
-          <div class="item-price">${item.soldOut ? 'Sold Out' : item.price}</div>
-        </div>
-      `).join("")}
-    </div>
-  `).join("");
+  container.innerHTML = CONCESSIONS_MENU.map(col => {
+    const itemsHtml = col.items.map(item =>
+      '<div class="menu-item ' + (item.soldOut ? 'sold-out' : '') + '">' +
+        '<div class="item-info">' +
+          '<div class="item-name">' + item.name + '</div>' +
+          '<div class="item-desc">' + item.desc + '</div>' +
+        '</div>' +
+        '<div class="item-price">' + (item.soldOut ? 'Sold Out' : item.price) + '</div>' +
+      '</div>'
+    ).join("");
+    return '<div class="category-col">' +
+      '<div class="cat-header">' + col.category + '</div>' + itemsHtml +
+    '</div>';
+  }).join("");
 }
 
 function updateClocks() {
@@ -397,7 +408,7 @@ function startCycle() {
   bar.style.transform = "scaleX(0)";
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      bar.style.transition = `transform ${duration}ms linear`;
+      bar.style.transition = "transform " + duration + "ms linear";
       bar.style.transform = "scaleX(1)";
     });
   });
@@ -428,7 +439,7 @@ function applyMovieData(data) {
 async function queryMovieDatabase(query) {
   const clean = query.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
   const firstLetter = clean.charAt(0) || "a";
-  const url = `https://media-imdb.com{firstLetter}/${encodeURIComponent(clean)}.json`;
+  const url = "https://media-imdb.com" + firstLetter + "/" + encodeURIComponent(clean) + ".json";
   const res = await fetch(url);
   if (!res.ok) throw new Error("Search failed");
   const data = await res.json();
@@ -468,7 +479,7 @@ async function searchMovie() {
   const status = document.getElementById("search-status");
   const resultsBox = document.getElementById("search-results");
   resultsBox.innerHTML = "";
-  status.textContent = "Searching IMDb...";
+  status.textContent = "Searching...";
   try {
     const matches = await queryMovieDatabase(query);
     status.textContent = "Select a movie:";
@@ -476,12 +487,12 @@ async function searchMovie() {
       const btn = document.createElement("button");
       btn.className = "btn btn-secondary";
       btn.style.textAlign = "left";
-      btn.textContent = `${movie.title} (${movie.year})`;
+      btn.textContent = movie.title + " (" + movie.year + ")";
       btn.onclick = () => selectMovie(movie);
       resultsBox.appendChild(btn);
     });
   } catch (e) {
-    status.textContent = "No matches found — try a shorter title.";
+    status.textContent = "No matches found — check spelling and try again.";
   }
 }
 
