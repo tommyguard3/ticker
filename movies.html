@@ -461,27 +461,57 @@ function applyMovieData(data) {
   document.getElementById("movie-runtime").textContent = data.runtime || "Cinéma La France";
 }
 
+function queryImdbSlug(slug) {
+  return new Promise((resolve) => {
+    const cleanSlug = slug.replace(/[^a-z0-9_]/g, "");
+    if (!cleanSlug) { resolve([]); return; }
+    const cbName = "imdb$" + cleanSlug;
+    const script = document.createElement("script");
+    const imdbHost = ["sg", "media-imdb", "com"].join(".");
+    const path = ["", "suggests", cleanSlug.charAt(0), cleanSlug + ".json"].join("/");
+
+    const timer = setTimeout(() => { cleanup(); resolve([]); }, 4000);
+    function cleanup() {
+      clearTimeout(timer);
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    window[cbName] = (data) => {
+      cleanup();
+      const list = (data && data.d ? data.d : []).filter(item =>
+        item.i && Array.isArray(item.i) && item.i.at(0) && item.y && item.qid !== "videoGame"
+      );
+      resolve(list);
+    };
+
+    script.src = "https://" + imdbHost + path;
+    script.onerror = () => { cleanup(); resolve([]); };
+    document.body.appendChild(script);
+  });
+}
+
 async function queryMovieDatabase(query) {
-  const clean = query.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
-  const firstChar = clean.charAt(0) || "a";
-  const imdbHost = ["v3", "sg", "media-imdb", "com"].join(".");
-  const imdbUrl = "https://" + imdbHost + "/suggestion/" + firstChar + "/" + encodeURIComponent(clean) + ".json";
+  const raw = query.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
+  const noArticle = raw.replace(/^(the|a|an)\s+/, "");
+  const slugs = Array.from(new Set([
+    noArticle.replace(/\s+/g, "_"),
+    raw.replace(/\s+/g, "_")
+  ]));
 
-  const proxyHost = ["api", "allorigins", "win"].join(".");
-  const proxy = new URL("https://" + proxyHost + "/raw");
-  proxy.searchParams.set("url", imdbUrl);
+  const resultsArrays = await Promise.all(slugs.map(s => queryImdbSlug(s)));
+  const seen = new Set();
+  const unique = resultsArrays.flat().filter(m => {
+    if (seen.has(m.id)) return false;
+    seen.add(m.id);
+    return true;
+  });
 
-  const res = await fetch(proxy.toString());
-  if (!res.ok) throw new Error("Search HTTP " + res.status);
-  const data = await res.json();
-  const list = (data && data.d ? data.d : []).filter(item =>
-    item.i && item.i.imageUrl && (item.qid === "movie" || item.qid === "tvMovie")
-  );
-  if (list.length === 0) throw new Error("No movies found");
+  if (unique.length === 0) throw new Error("No movies found");
 
-  return list.slice(0, 4).map(m => ({
+  return unique.slice(0, 5).map(m => ({
     title: m.l,
-    poster: m.i.imageUrl.replace("._V1_.", "._V1_FMjpg_UX900_."),
+    poster: m.i.at(0).replace("._V1_.", "._V1_FMjpg_UX900_."),
     rating: "FEATURE",
     year: m.y ? String(m.y) : "",
     runtime: m.s || "Tonight's Presentation"
