@@ -131,35 +131,40 @@
     justify-content: flex-start;
     flex: 0 0 auto;
   }
-  .menu-item {
+    .menu-item {
     display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    padding: 9px 0;
+    flex-direction: column;
+    padding: 8px 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.14);
   }
   .menu-item:last-child { border-bottom: none; }
-  .item-info {
-    padding-right: 10px;
-    min-width: 0;
+  .item-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
   }
-    .item-name {
-    font-size: 1.3rem;
+  .item-name {
+    font-size: 1.25rem;
     font-weight: 700;
     line-height: 1.2;
     color: #ffffff;
-    margin-bottom: 3px;
   }
   .item-desc {
-    font-size: 0.96rem;
+    font-size: 0.94rem;
     line-height: 1.25;
     color: var(--text-muted);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .item-price {
-    font-size: 1.38rem;
+    font-size: 1.28rem;
     font-weight: 800;
     color: var(--gold);
     white-space: nowrap;
+    flex-shrink: 0;
   }
   .sold-out .item-name, .sold-out .item-desc {
     text-decoration: line-through;
@@ -172,11 +177,11 @@
   }
   .cat-footer-art {
     width: 100%;
-    aspect-ratio: 16 / 10;
-    max-height: 280px;
+    height: 195px;
+    flex-shrink: 0;
     border-radius: 12px;
     margin-top: auto;
-    padding-top: 14px;
+    padding-top: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -410,11 +415,11 @@ function renderMenu() {
   container.innerHTML = CONCESSIONS_MENU.map(col => {
     const itemsHtml = col.items.map(item =>
       '<div class="menu-item ' + (item.soldOut ? 'sold-out' : '') + '">' +
-        '<div class="item-info">' +
+        '<div class="item-top">' +
           '<div class="item-name">' + item.name + '</div>' +
-          '<div class="item-desc">' + item.desc + '</div>' +
+          '<div class="item-price">' + (item.soldOut ? 'Sold Out' : item.price) + '</div>' +
         '</div>' +
-        '<div class="item-price">' + (item.soldOut ? 'Sold Out' : item.price) + '</div>' +
+        '<div class="item-desc">' + item.desc + '</div>' +
       '</div>'
     ).join("");
     const imgHtml = '<div class="cat-footer-art">' +
